@@ -6,7 +6,9 @@ return [
 
     'allowed_methods' => ['*'],
 
-    'allowed_origins' => ['http://localhost:5173'], // ganti dengan URL frontend production nanti
+    'allowed_origins' => [
+        env('FRONTEND_URL', 'http://localhost:5173'),
+    ], 
 
     'allowed_origins_patterns' => [],
 
