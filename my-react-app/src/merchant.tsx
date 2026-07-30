@@ -37,7 +37,7 @@ import {
   UserCircle,
 } from "lucide-react";
 
-const API_URL =import.meta.env.VITE_API_URL + "/api" || "http://localhost:8000/api";
+const API_URL = (import.meta.env.VITE_API_URL || "http://localhost:8000") + "/api";
 const MAX_FILE_SIZE = 2 * 1024 * 1024;
 
 /* ---------- Types ---------- */
