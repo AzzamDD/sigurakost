@@ -375,9 +375,10 @@ export default function SettingsPage() {
                                     <button
                                         type="button"
                                         onClick={handlePhotoPick}
-                                        className="bg-slate-900 hover:bg-black text-white text-xs font-semibold px-4 py-2 rounded-full transition"
+                                        disabled={uploadingPhoto}
+                                        className="bg-slate-900 hover:bg-black text-white text-xs font-semibold px-4 py-2 rounded-full transition disabled:opacity-50"
                                     >
-                                        {profileForm.photo ? "Change Photo" : "Upload Photo"}
+                                        {uploadingPhoto ? "Uploading..." : profileForm.photo ? "Change Photo" : "Upload Photo"}
                                     </button>
                                     <p className="text-xs text-slate-400 mt-2">
                                         Recommended: JPG or PNG, max 2MB
