@@ -9,6 +9,8 @@ class StokToko extends Model
 {
     protected $table = 'stok_toko';
 
+    public $timestamps = false;   // <-- TAMBAHIN INI
+
     protected $fillable = [
         'toko_id',
         'produk_id',
