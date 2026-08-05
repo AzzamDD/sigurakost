@@ -5,7 +5,7 @@ import {
     Home,
     Package,
     Tags,
-    Warehouse,
+    Warehouse as WarehouseIcon,
     Store,
     ShieldCheck,
     Users,
@@ -15,6 +15,7 @@ import {
     UserRound,
     ShoppingBag,
     Building2,
+    Receipt
    
 
 } from "lucide-react";
@@ -40,13 +41,14 @@ export default function Dashboard() {
     });
     const [loadingStats, setLoadingStats] = useState(true);
 
-    const menuItems = [
-        { label: "Beranda", icon: Home, path: "/dashboard", active: true },
-        { label: "Produk", icon: Package, path: "/produk" },
-        { label: "Kategori", icon: Tags, path: "/kategori" },
-        { label: "Warehouse", icon: Warehouse, path: "/warehouse" },
-        { label: "Merchant", icon: Store, path: "/merchant" },
-    ];
+const menuItems = [
+    { label: "Beranda", icon: Home, path: "/dashboard", active: true },
+    { label: "Produk", icon: Package, path: "/produk", active: false },
+    { label: "Kategori", icon: Tags, path: "/kategori", active: false },
+    { label: "Warehouse", icon: WarehouseIcon, path: "/warehouse", active: false },
+    { label: "Merchant", icon: Store, path: "/merchant", active: false },
+    { label: "Transaksi", icon: Receipt, path: "/transaksi", active: false },
+];
 
     const accountItems = [
         { label: "Roles", icon: ShieldCheck, path: "/role" },
