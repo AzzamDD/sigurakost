@@ -10,7 +10,7 @@ import ManageUser from "./manageUser";
 import Settings from "./settings";
 import ForgotPasswordPage from "./forgotPassword";
 import ResetPasswordPage from "./resetpassword";
-
+import TransactionPage from "./transaksi"; 
 
 export default function App() {
   return (
@@ -21,12 +21,14 @@ export default function App() {
       <Route path="/kategori" element={<CategoriesPage />} />
       <Route path="/warehouse" element={<WarehousePage />} />
       <Route path="/merchant" element={<MerchantPage />} />
+      <Route path="/transaksi" element={<TransactionPage />} /> 
+
       <Route path="/role" element={<RolePage />} />
       <Route path="/manageUser" element={<ManageUser />} />
       <Route path="/settings" element={<Settings />} />
       <Route path="/forgotPassword" element={<ForgotPasswordPage />} />
       <Route path="/reset-password" element={<ResetPasswordPage />} />
- 
+
     </Routes>
   );
 }
