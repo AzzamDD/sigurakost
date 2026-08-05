@@ -25,6 +25,7 @@ type DashboardStats = {
     total_user: number;
     total_order: number;
     total_merchant: number;
+    total_produk: number;
 };
 
 export default function Dashboard() {
@@ -35,6 +36,7 @@ export default function Dashboard() {
         total_user: 0,
         total_order: 0,
         total_merchant: 0,
+        total_produk: 0,
     });
     const [loadingStats, setLoadingStats] = useState(true);
 
@@ -100,15 +102,13 @@ export default function Dashboard() {
             iconColor: "text-emerald-500",
         },
         {
-            // Slot ke-4 dikosongkan — transaksi belum ada menu-nya
-            label: "Total Transaksi",
-            value: stats.total_order, // bisa diganti field lain kalau nanti ada
-            icon: CalendarClock,
+            label: "Total Produk",
+            value: stats.total_produk,
+            icon: Package,
             iconBg: "bg-orange-100",
             iconColor: "text-orange-500",
         },
     ];
-
     return (
         <div className="min-h-screen w-full bg-slate-100 flex">
             {/* Sidebar */}
@@ -133,11 +133,10 @@ export default function Dashboard() {
                             <li key={label}>
                                 <button
                                     onClick={() => navigate(path)}
-                                    className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition ${
-                                        active
-                                            ? "bg-blue-50 text-blue-700"
-                                            : "text-slate-500 hover:bg-slate-50 hover:text-slate-700"
-                                    }`}
+                                    className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition ${active
+                                        ? "bg-blue-50 text-blue-700"
+                                        : "text-slate-500 hover:bg-slate-50 hover:text-slate-700"
+                                        }`}
                                 >
                                     <Icon className="w-[18px] h-[18px]" />
                                     {label}
