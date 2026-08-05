@@ -1,9 +1,11 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import { useUser } from "./context/UserContext";
 
 const API_URL = (import.meta.env.VITE_API_URL || "http://localhost:8000") + "/api";
 
 export default function LoginPage() {
+  const { setUser } = useUser();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -34,10 +36,9 @@ export default function LoginPage() {
         return;
       }
 
-      // simpan token untuk request selanjutnya
       localStorage.setItem("token", data.token);
       localStorage.setItem("user", JSON.stringify(data.user));
-
+      setUser(data.user);       // sinkronin context DI SINI, pake data yang udah valid
       navigate("/dashboard");
     } catch (err) {
       setError("Tidak dapat terhubung ke server");
