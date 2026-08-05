@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useEffect, type ReactNode } from "react";
-
+type RoleData = { id: number; nama: string };
 
 type UserData = {
     id: number;
@@ -7,6 +7,8 @@ type UserData = {
     email: string;
     foto: string | null;
     no_hp: string | null;
+    role_id: number | null;
+    role: RoleData | null;
 };
 
 type UserContextType = {

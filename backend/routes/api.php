@@ -14,6 +14,7 @@ use App\Http\Controllers\PenggunaController;
 use App\Http\Controllers\RoleController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\AuthPasswordController;
+use App\Http\Controllers\TransaksiController;
 use Illuminate\Support\Facades\Route;
 
 Route::post('/login', [AuthController::class, 'login']);
@@ -78,4 +79,11 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::get('/dashboard/stats', [DashboardController::class, 'stats']);
 
-}); 
+    Route::get('/transaksi', [TransaksiController::class, 'index']);
+    Route::get('/transaksi/{id}', [TransaksiController::class, 'show']);
+    Route::post('/transaksi', [TransaksiController::class, 'store']);
+
+    Route::middleware('role:admin')->group(function () {
+        Route::delete('/transaksi/{id}', [TransaksiController::class, 'destroy']);
+    });
+});
