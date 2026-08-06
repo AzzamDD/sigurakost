@@ -12,7 +12,7 @@ import {
     Settings as SettingsIcon,
     LogOut,
     Search,
-
+    Receipt,
     User,
     Mail,
     Phone,
@@ -74,14 +74,14 @@ export default function SettingsPage() {
         whatsapp: false,
     });
 
-
-    const menuItems = [
-        { label: "Beranda", icon: Home, path: "/dashboard", active: false },
-        { label: "Produk", icon: Package, path: "/produk", active: false },
-        { label: "Kategori", icon: Tags, path: "/kategori", active: true },
-        { label: "Warehouse", icon: WarehouseIcon, path: "/warehouse", active: false },
-        { label: "Merchant", icon: Store, path: "/merchant", active: false },
-    ];
+const menuItems = [
+    { label: "Beranda", icon: Home, path: "/dashboard", active: true },
+    { label: "Produk", icon: Package, path: "/produk", active: false },
+    { label: "Kategori", icon: Tags, path: "/kategori", active: false },
+    { label: "Warehouse", icon: WarehouseIcon, path: "/warehouse", active: false },
+    { label: "Merchant", icon: Store, path: "/merchant", active: false },
+    { label: "Transaksi", icon: Receipt, path: "/transaksi", active: false },
+];
     const accountItems = [
         { label: "Roles", icon: ShieldCheck, path: "/role" },
         { label: "Manajemen User", icon: Users, path: "/manageUser" },

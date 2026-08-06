@@ -15,7 +15,7 @@ import {
     UserRound,
     ShoppingBag,
     Building2,
-    Receipt
+    Receipt,
    
 
 } from "lucide-react";

@@ -19,6 +19,7 @@ import {
     User,
     CheckCircle2,
     Shield,
+    Receipt,
 } from "lucide-react";
 
 const API_URL = (import.meta.env.VITE_API_URL || "http://localhost:8000") + "/api";
@@ -50,13 +51,14 @@ export default function RolePage() {
     const [submitting, setSubmitting] = useState(false);
     const [searchQuery, setSearchQuery] = useState("");
 
-    const menuItems = [
-        { label: "Beranda", icon: Home, path: "/dashboard", active: false },
-        { label: "Produk", icon: Package, path: "/produk", active: false },
-        { label: "Kategori", icon: Tags, path: "/kategori", active: false },
-        { label: "Warehouse", icon: WarehouseIcon, path: "/warehouse", active: false },
-        { label: "Merchant", icon: Store, path: "/merchant", active: false },
-    ];
+const menuItems = [
+    { label: "Beranda", icon: Home, path: "/dashboard", active: true },
+    { label: "Produk", icon: Package, path: "/produk", active: false },
+    { label: "Kategori", icon: Tags, path: "/kategori", active: false },
+    { label: "Warehouse", icon: WarehouseIcon, path: "/warehouse", active: false },
+    { label: "Merchant", icon: Store, path: "/merchant", active: false },
+    { label: "Transaksi", icon: Receipt, path: "/transaksi", active: false },
+];
 
     const accountItems = [
         { label: "Roles", icon: ShieldCheck, path: "/role", active: true },
