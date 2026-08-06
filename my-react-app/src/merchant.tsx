@@ -141,8 +141,6 @@ export default function MerchantPage() {
   const [loadingPengguna, setLoadingPengguna] = useState(true);
 
   // Assign product
-  const [produkList, setProdukList] = useState<ProdukData[]>([]);
-  const [loadingProduk, setLoadingProduk] = useState(true);
   const [gudangList, setGudangList] = useState<GudangData[]>([]);
   const [isAssignOpen, setIsAssignOpen] = useState(false);
   const [assignGudangId, setAssignGudangId] = useState<string>("");
