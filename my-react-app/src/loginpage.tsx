@@ -6,12 +6,15 @@ const API_URL = (import.meta.env.VITE_API_URL || "http://localhost:8000") + "/ap
 
 export default function LoginPage() {
   const { setUser } = useUser();
+  const { refreshUser } = useUser();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+
   const navigate = useNavigate();
+
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();

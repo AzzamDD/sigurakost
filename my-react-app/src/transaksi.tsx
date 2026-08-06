@@ -73,7 +73,7 @@ export default function TransactionPage() {
     const navigate = useNavigate();
     const { user, loading: userLoading } = useUser();
 
-    const role = user?.role?.nama ?? null;
+    const role = user?.role?.nama?.trim().toLowerCase() ?? null;
     const isAdmin = role === "admin";
 
     const [view, setView] = useState<ViewMode>("list");

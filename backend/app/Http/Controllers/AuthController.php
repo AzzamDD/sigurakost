@@ -25,11 +25,14 @@ class AuthController extends Controller
 
         $pengguna = Pengguna::where('email', $request->email)->first();
 
-        if (! $pengguna || ! Hash::check($request->password, $pengguna->password)) {
+        if (!$pengguna || !Hash::check($request->password, $pengguna->password)) {
             return response()->json([
                 'message' => 'Email atau password salah',
             ], 401);
         }
+
+        // Wajib supaya response login memiliki object role.
+        $pengguna->load('role');
 
         $token = $pengguna->createToken('auth_token')->plainTextToken;
 
@@ -51,6 +54,9 @@ class AuthController extends Controller
 
     public function me(Request $request)
     {
-        return response()->json($request->user());
+        // Wajib supaya UserContext menerima object role.
+        return response()->json(
+            $request->user()->load('role')
+        );
     }
 }
