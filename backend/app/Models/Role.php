@@ -12,5 +12,7 @@ class Role extends Model
 
     protected $fillable = [
         'nama',
+        'email',
+        'role_id',
     ];
 }
