@@ -5,7 +5,7 @@ import { useUser } from "./context/UserContext";
 const API_URL = (import.meta.env.VITE_API_URL || "http://localhost:8000") + "/api";
 
 export default function LoginPage() {
-  const { setUser } = useUser();
+  // ✅ Pakai refreshUser, hapus setUser yang gak lengkap
   const { refreshUser } = useUser();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -14,7 +14,6 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
 
   const navigate = useNavigate();
-
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -39,9 +38,13 @@ export default function LoginPage() {
         return;
       }
 
+      // 1. Simpan token dulu
       localStorage.setItem("token", data.token);
-      localStorage.setItem("user", JSON.stringify(data.user));
-      setUser(data.user);       // sinkronin context DI SINI, pake data yang udah valid
+
+      // 2. ✅ Panggil refreshUser() untuk ambil data user LENGKAP + ROLE dari /api/me
+      await refreshUser();
+
+      // 3. Baru pindah ke dashboard
       navigate("/dashboard");
     } catch (err) {
       setError("Tidak dapat terhubung ke server");
