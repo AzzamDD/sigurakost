@@ -2,32 +2,20 @@ import { type FormEvent, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useUser } from "./context/UserContext";
 import {
-    Home,
-    Package,
-    Tags,
-    Warehouse as WarehouseIcon,
-    Store,
-    ShieldCheck,
-    Users,
-    Settings as SettingsIcon,
-    Search,
-    ChevronRight,
-    ChevronLeft,
-    Plus,
-    Trash2,
-    X,
-    ChevronDown,
-    Receipt,
-    ShoppingCart,
-    Minus,
+    Home, Package, Tags, Warehouse as WarehouseIcon, Store,
+    ShieldCheck, Users, Settings as SettingsIcon, Search,
+    ChevronRight, ChevronLeft, ChevronDown, Plus, Trash2,
+    X, Receipt, ShoppingCart, Minus, AlertCircle,
+    ChevronLeft as PagePrev, ChevronRight as PageNext,
 } from "lucide-react";
 
 const API_URL = (import.meta.env.VITE_API_URL || "http://localhost:8000") + "/api";
 
-/* ---------- Types ---------- */
-type TokoRef = { id: number; nama: string };
+/* ─────────────────────────── Types ─────────────────────────── */
+type TokoRef    = { id: number; nama: string };
 type PenggunaRef = { id: number; nama: string };
-type ProdukRef = { id: number; nama: string; harga: number };
+type ProdukRef  = { id: number; nama: string; harga: number };
+type KategoriRef = { id: number; name: string };
 
 type DetailTransaksiItem = {
     id: number;
@@ -35,7 +23,7 @@ type DetailTransaksiItem = {
     jumlah: number;
     harga: number;
     sub_total: number;
-    produk?: ProdukRef;
+    produk?: ProdukRef & { kategori?: KategoriRef };
 };
 
 type TransaksiItem = {
@@ -57,6 +45,7 @@ type PaginatedResponse = {
     current_page: number;
     last_page: number;
     total: number;
+    per_page: number;
 };
 
 type CartItem = {
@@ -68,88 +57,123 @@ type CartItem = {
 
 type ViewMode = "list" | "add";
 
+/* ─────────────────────────── Component ─────────────────────── */
 export default function TransactionPage() {
-    const navigate = useNavigate();
+    const navigate  = useNavigate();
     const { user, loading: userLoading } = useUser();
 
-    const role = user?.role?.nama?.trim().toLowerCase() ?? null;
+    const role    = user?.role?.nama?.trim().toLowerCase() ?? null;
     const isAdmin = role === "admin";
 
-    const [view, setView] = useState<ViewMode>("list");
-    const [transaksiList, setTransaksiList] = useState<TransaksiItem[]>([]);
-    const [loadingList, setLoadingList] = useState(true);
+    /* ── State ── */
+    const [view, setView]                         = useState<ViewMode>("list");
+    const [transaksiList, setTransaksiList]       = useState<TransaksiItem[]>([]);
+    const [loadingList, setLoadingList]           = useState(true);
     const [selectedTransaksi, setSelectedTransaksi] = useState<TransaksiItem | null>(null);
 
-    const [tokoList, setTokoList] = useState<TokoRef[]>([]);
-    const [filterTokoId, setFilterTokoId] = useState<string>("");
+    // Pagination
+    const [currentPage, setCurrentPage]   = useState(1);
+    const [lastPage, setLastPage]         = useState(1);
+    const [totalRows, setTotalRows]       = useState(0);
 
-    const [produkList, setProdukList] = useState<ProdukRef[]>([]);
-    const [cart, setCart] = useState<CartItem[]>([]);
+    // Filter & search
+    const [tokoList, setTokoList]         = useState<TokoRef[]>([]);
+    const [filterTokoId, setFilterTokoId] = useState("");
+    const [searchQuery, setSearchQuery]   = useState("");
+
+    // Form — add transaksi
+    const [produkList, setProdukList]         = useState<ProdukRef[]>([]);
+    const [cart, setCart]                     = useState<CartItem[]>([]);
     const [selectedProdukId, setSelectedProdukId] = useState("");
-    const [jumlahInput, setJumlahInput] = useState("1");
+    const [jumlahInput, setJumlahInput]       = useState("1");
+    const [namaPelanggan, setNamaPelanggan]   = useState("");
+    const [noHp, setNoHp]                     = useState("");
+    const [pajak, setPajak]                   = useState("0");
+    const [adminTokoId, setAdminTokoId]       = useState("");
+    const [submitting, setSubmitting]         = useState(false);
 
-    const [namaPelanggan, setNamaPelanggan] = useState("");
-    const [noHp, setNoHp] = useState("");
-    const [pajak, setPajak] = useState("0");
-    const [adminTokoId, setAdminTokoId] = useState("");
+    // ✅ Error state untuk tampilkan pesan dari server
+    const [listError, setListError]   = useState<string | null>(null);
+    const [formError, setFormError]   = useState<string | null>(null);
 
-    const [submitting, setSubmitting] = useState(false);
-    const [searchQuery, setSearchQuery] = useState("");
-
+    /* ── Sidebar items ── */
     const menuItems = [
-        { label: "Beranda", icon: Home, path: "/dashboard" },
-        { label: "Produk", icon: Package, path: "/produk" },
-        { label: "Kategori", icon: Tags, path: "/kategori" },
-        { label: "Warehouse", icon: WarehouseIcon, path: "/warehouse" },
-        { label: "Merchant", icon: Store, path: "/merchant" },
-        { label: "Transaksi", icon: Receipt, path: "/transaksi", active: true },
+        { label: "Beranda",   icon: Home,          path: "/dashboard"  },
+        { label: "Produk",    icon: Package,        path: "/produk"     },
+        { label: "Kategori",  icon: Tags,           path: "/kategori"   },
+        { label: "Warehouse", icon: WarehouseIcon,  path: "/warehouse"  },
+        { label: "Merchant",  icon: Store,          path: "/merchant"   },
+        { label: "Transaksi", icon: Receipt,        path: "/transaksi", active: true },
     ];
-
     const accountItems = [
-        { label: "Roles", icon: ShieldCheck, path: "/role" },
-        { label: "Manajemen User", icon: Users, path: "/manageUser" },
-        { label: "Settings", icon: SettingsIcon, path: "/settings" },
+        { label: "Roles",          icon: ShieldCheck,  path: "/role"       },
+        { label: "Manajemen User", icon: Users,         path: "/manageUser" },
+        { label: "Settings",       icon: SettingsIcon,  path: "/settings"   },
     ];
 
+    /* ── Helpers ── */
     const authHeaders = () => {
         const token = localStorage.getItem("token");
-        return { Authorization: `Bearer ${token}`, Accept: "application/json" };
+        return {
+            Authorization: `Bearer ${token}`,
+            Accept: "application/json",
+        } as Record<string, string>;
     };
 
-    /* ---------- Fetch ---------- */
-    const fetchTransaksi = async () => {
+    const fmt = (n: number | string) =>
+        Number(n).toLocaleString("id-ID");
+
+    /* ── Fetch list ── */
+    const fetchTransaksi = async (page = 1) => {
         setLoadingList(true);
+        setListError(null);
         try {
-            const params = new URLSearchParams();
+            const params = new URLSearchParams({ page: String(page) });
             if (isAdmin && filterTokoId) params.set("toko_id", filterTokoId);
 
-            const res = await fetch(`${API_URL}/transaksi?${params.toString()}`, {
+            const res  = await fetch(`${API_URL}/transaksi?${params}`, {
                 headers: authHeaders(),
             });
-            if (res.ok) {
-                const data: PaginatedResponse = await res.json();
-                setTransaksiList(data.data);
+            const data = await res.json();
+
+            if (!res.ok) {
+                // ✅ Tampilkan pesan error dari server (termasuk 403 kasir tanpa toko)
+                setListError(data.message || "Gagal memuat data transaksi.");
+                setTransaksiList([]);
+                return;
             }
+
+            const paginated = data as PaginatedResponse;
+            setTransaksiList(paginated.data);
+            setCurrentPage(paginated.current_page);
+            setLastPage(paginated.last_page);
+            setTotalRows(paginated.total);
+        } catch {
+            setListError("Tidak dapat terhubung ke server.");
         } finally {
             setLoadingList(false);
         }
     };
 
     const fetchToko = async () => {
-        const res = await fetch(`${API_URL}/toko`, { headers: authHeaders() });
-        if (res.ok) setTokoList(await res.json());
+        try {
+            const res = await fetch(`${API_URL}/toko`, { headers: authHeaders() });
+            if (res.ok) setTokoList(await res.json());
+        } catch { /* silent */ }
     };
 
     const fetchProduk = async () => {
-        const res = await fetch(`${API_URL}/produk`, { headers: authHeaders() });
-        if (res.ok) setProdukList(await res.json());
+        try {
+            const res = await fetch(`${API_URL}/produk`, { headers: authHeaders() });
+            if (res.ok) setProdukList(await res.json());
+        } catch { /* silent */ }
     };
 
+    /* ── Effects ── */
     useEffect(() => {
         if (userLoading || !role) return;
-        fetchTransaksi();
-        // Fetch toko untuk semua role (dibutuhkan saat buat transaksi juga)
         fetchToko();
+        fetchTransaksi(1);
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [userLoading, role, filterTokoId]);
 
@@ -158,25 +182,23 @@ export default function TransactionPage() {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [view]);
 
-    /* ---------- Cart ---------- */
+    /* ── Cart logic ── */
     const addToCart = () => {
         if (!selectedProdukId) return;
         const produk = produkList.find((p) => p.id === Number(selectedProdukId));
         if (!produk) return;
-
-        const jumlah = Number(jumlahInput) || 1;
+        const jumlah = Math.max(1, Number(jumlahInput) || 1);
 
         setCart((prev) => {
             const existing = prev.find((c) => c.produk_id === produk.id);
             if (existing) {
                 return prev.map((c) =>
-                    c.produk_id === produk.id ? { ...c, jumlah: c.jumlah + jumlah } : c
+                    c.produk_id === produk.id
+                        ? { ...c, jumlah: c.jumlah + jumlah }
+                        : c
                 );
             }
-            return [
-                ...prev,
-                { produk_id: produk.id, nama: produk.nama, harga: produk.harga, jumlah },
-            ];
+            return [...prev, { produk_id: produk.id, nama: produk.nama, harga: produk.harga, jumlah }];
         });
 
         setSelectedProdukId("");
@@ -195,14 +217,13 @@ export default function TransactionPage() {
         );
     };
 
-    const removeFromCart = (produkId: number) => {
+    const removeFromCart = (produkId: number) =>
         setCart((prev) => prev.filter((c) => c.produk_id !== produkId));
-    };
 
     const cartSubTotal = cart.reduce((sum, c) => sum + c.harga * c.jumlah, 0);
-    const totalBayar = cartSubTotal + (Number(pajak) || 0);
+    const totalBayar   = cartSubTotal + (Number(pajak) || 0);
 
-    /* ---------- Submit ---------- */
+    /* ── Form ── */
     const resetForm = () => {
         setCart([]);
         setNamaPelanggan("");
@@ -211,27 +232,22 @@ export default function TransactionPage() {
         setAdminTokoId("");
         setSelectedProdukId("");
         setJumlahInput("1");
+        setFormError(null);
     };
 
-    const openAddPage = () => {
-        resetForm();
-        setView("add");
-    };
-
-    const closeAddPage = () => {
-        resetForm();
-        setView("list");
-    };
+    const openAdd  = () => { resetForm(); setView("add"); };
+    const closeAdd = () => { resetForm(); setView("list"); };
 
     const handleSubmit = async (e: FormEvent) => {
         e.preventDefault();
+        setFormError(null);
 
         if (cart.length === 0) {
-            alert("Keranjang masih kosong. Tambahkan minimal 1 produk.");
+            setFormError("Keranjang masih kosong. Tambahkan minimal 1 produk.");
             return;
         }
         if (isAdmin && !adminTokoId) {
-            alert("Pilih toko dulu.");
+            setFormError("Pilih toko terlebih dahulu.");
             return;
         }
 
@@ -239,34 +255,37 @@ export default function TransactionPage() {
         try {
             const payload: Record<string, unknown> = {
                 nama_pelanggan: namaPelanggan || null,
-                no_hp: noHp || null,
-                pajak: Number(pajak) || 0,
-                items: cart.map((c) => ({ produk_id: c.produk_id, jumlah: c.jumlah })),
+                no_hp:          noHp || null,
+                pajak:          Number(pajak) || 0,
+                items:          cart.map((c) => ({
+                    produk_id: c.produk_id,
+                    jumlah:    c.jumlah,
+                })),
             };
             if (isAdmin) payload.toko_id = Number(adminTokoId);
 
-            const res = await fetch(`${API_URL}/transaksi`, {
-                method: "POST",
+            const res  = await fetch(`${API_URL}/transaksi`, {
+                method:  "POST",
                 headers: { "Content-Type": "application/json", ...authHeaders() },
-                body: JSON.stringify(payload),
+                body:    JSON.stringify(payload),
             });
-
             const data = await res.json();
 
             if (!res.ok) {
+                // ✅ Tampilkan pesan spesifik dari backend (stok kurang, dll)
                 if (data.errors) {
-                    const firstError = Object.values(data.errors)[0];
-                    alert(Array.isArray(firstError) ? firstError[0] : data.message);
+                    const firstErr = Object.values(data.errors)[0];
+                    setFormError(Array.isArray(firstErr) ? firstErr[0] : data.message);
                 } else {
-                    alert(data.message || "Gagal membuat transaksi");
+                    setFormError(data.message || "Gagal membuat transaksi.");
                 }
                 return;
             }
 
-            await fetchTransaksi();
-            closeAddPage();
+            await fetchTransaksi(1);
+            closeAdd();
         } catch {
-            alert("Tidak dapat terhubung ke server");
+            setFormError("Tidak dapat terhubung ke server.");
         } finally {
             setSubmitting(false);
         }
@@ -274,25 +293,28 @@ export default function TransactionPage() {
 
     const handleVoid = async (t: TransaksiItem) => {
         if (!confirm(`Batalkan transaksi #${t.id}? Stok akan dikembalikan.`)) return;
-
         try {
-            const res = await fetch(`${API_URL}/transaksi/${t.id}`, {
-                method: "DELETE",
+            const res  = await fetch(`${API_URL}/transaksi/${t.id}`, {
+                method:  "DELETE",
                 headers: authHeaders(),
             });
             const data = await res.json();
-
             if (!res.ok) {
-                alert(data.message || "Gagal membatalkan transaksi");
+                alert(data.message || "Gagal membatalkan transaksi.");
                 return;
             }
-
-            await fetchTransaksi();
+            // Kalau halaman sekarang > 1 dan setelah hapus tinggal kosong → balik ke prev page
+            const targetPage =
+                transaksiList.length === 1 && currentPage > 1
+                    ? currentPage - 1
+                    : currentPage;
+            await fetchTransaksi(targetPage);
         } catch {
-            alert("Tidak dapat terhubung ke server");
+            alert("Tidak dapat terhubung ke server.");
         }
     };
 
+    /* ── Client-side search (atas hasil page aktif) ── */
     const filteredTransaksi = transaksiList.filter((t) => {
         const q = searchQuery.toLowerCase().trim();
         if (!q) return true;
@@ -303,7 +325,7 @@ export default function TransactionPage() {
         );
     });
 
-    /* ---------- Loading / No Role Guard ---------- */
+    /* ─────────────── Guard ─────────────── */
     if (userLoading) {
         return (
             <div className="min-h-screen flex items-center justify-center text-slate-400">
@@ -311,35 +333,32 @@ export default function TransactionPage() {
             </div>
         );
     }
-
     if (!role) {
         return (
             <div className="min-h-screen flex items-center justify-center text-slate-500 text-sm">
-                Akun ini belum punya role. Hubungi admin untuk mengatur akses.
+                Akun ini belum punya role. Hubungi admin.
             </div>
         );
     }
 
+    /* ─────────────── Render ─────────────── */
     return (
         <div className="min-h-screen w-full bg-slate-100 flex font-sans">
-            {/* ===== SIDEBAR ===== */}
+
+            {/* ══════════ SIDEBAR ══════════ */}
             <aside className="w-60 shrink-0 bg-white border-r border-slate-200 flex-col hidden md:flex">
                 <div className="flex items-center gap-2 px-6 py-6">
                     <img
                         src="/assets/sigurakost.png"
-                        alt="SiguraKost logo"
-                        className="w-6 h-6 object-contain bg-slate-200 rounded-sm"
-                        onError={(e) => {
-                            e.currentTarget.style.display = "none";
-                        }}
+                        alt="logo"
+                        className="w-6 h-6 object-contain"
+                        onError={(e) => (e.currentTarget.style.display = "none")}
                     />
                     <span className="text-lg font-extrabold text-blue-700 tracking-tight">
                         SiguraKost
                     </span>
                 </div>
-
                 <nav className="flex-1 px-4 overflow-y-auto">
-                    {/* Menu Utama */}
                     <p className="px-2 text-[11px] font-semibold text-slate-400 uppercase tracking-wide mb-2">
                         Menu
                     </p>
@@ -360,8 +379,6 @@ export default function TransactionPage() {
                             </li>
                         ))}
                     </ul>
-
-                    {/* Account Settings — selalu tampil, konsisten dengan halaman lain */}
                     <p className="px-2 text-[11px] font-semibold text-slate-400 uppercase tracking-wide mb-2">
                         Account Settings
                     </p>
@@ -381,8 +398,9 @@ export default function TransactionPage() {
                 </nav>
             </aside>
 
-            {/* ===== MAIN ===== */}
+            {/* ══════════ MAIN ══════════ */}
             <div className="flex-1 flex flex-col min-w-0">
+
                 {/* Header */}
                 <header className="flex items-center justify-between gap-4 px-8 py-5 bg-slate-100/50 backdrop-blur-sm sticky top-0 z-10 border-b border-slate-200/50">
                     <div>
@@ -391,7 +409,7 @@ export default function TransactionPage() {
                         </h1>
                         {view === "add" && (
                             <button
-                                onClick={closeAddPage}
+                                onClick={closeAdd}
                                 className="mt-0.5 inline-flex items-center gap-1 text-xs font-medium text-slate-400 hover:text-slate-700 transition"
                             >
                                 <ChevronLeft className="w-3.5 h-3.5" />
@@ -406,7 +424,7 @@ export default function TransactionPage() {
                                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                                 <input
                                     type="text"
-                                    placeholder="Cari transaksi..."
+                                    placeholder="Cari ID, pelanggan, toko..."
                                     value={searchQuery}
                                     onChange={(e) => setSearchQuery(e.target.value)}
                                     className="w-full rounded-full border border-slate-200 bg-white pl-9 pr-4 py-2 text-sm text-slate-600 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -432,23 +450,27 @@ export default function TransactionPage() {
 
                 {/* Content */}
                 <main className="flex-1 px-8 pb-8 pt-4 overflow-y-auto">
-                    {/* ===== LIST VIEW ===== */}
+
+                    {/* ══════ LIST VIEW ══════ */}
                     {view === "list" && (
                         <div className="max-w-6xl mx-auto">
                             <div className="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-sm">
+
+                                {/* Toolbar */}
                                 <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100 gap-3 flex-wrap">
                                     <p className="text-base font-semibold text-slate-800">
-                                        <span className="text-blue-700">{filteredTransaksi.length}</span>{" "}
-                                        Total Transaksi
+                                        <span className="text-blue-700">{totalRows}</span> Total Transaksi
                                     </p>
-
                                     <div className="flex items-center gap-3">
-                                        {/* Filter toko hanya untuk admin */}
+                                        {/* Filter toko — admin only */}
                                         {isAdmin && (
                                             <div className="relative">
                                                 <select
                                                     value={filterTokoId}
-                                                    onChange={(e) => setFilterTokoId(e.target.value)}
+                                                    onChange={(e) => {
+                                                        setFilterTokoId(e.target.value);
+                                                        setCurrentPage(1);
+                                                    }}
                                                     className="appearance-none rounded-full border border-slate-200 bg-white pl-4 pr-9 py-2 text-sm text-slate-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
                                                 >
                                                     <option value="">Semua Toko</option>
@@ -461,9 +483,8 @@ export default function TransactionPage() {
                                                 <ChevronDown className="w-4 h-4 text-slate-400 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
                                             </div>
                                         )}
-
                                         <button
-                                            onClick={openAddPage}
+                                            onClick={openAdd}
                                             className="inline-flex items-center gap-1.5 bg-blue-700 hover:bg-blue-800 text-white text-sm font-medium px-4 py-2 rounded-full transition"
                                         >
                                             Buat Transaksi
@@ -472,6 +493,15 @@ export default function TransactionPage() {
                                     </div>
                                 </div>
 
+                                {/* ✅ Error banner */}
+                                {listError && (
+                                    <div className="flex items-center gap-2 px-5 py-3 bg-rose-50 border-b border-rose-100 text-rose-600 text-sm">
+                                        <AlertCircle className="w-4 h-4 shrink-0" />
+                                        {listError}
+                                    </div>
+                                )}
+
+                                {/* Table */}
                                 <div className="overflow-x-auto">
                                     <table className="w-full text-sm">
                                         <thead>
@@ -486,21 +516,23 @@ export default function TransactionPage() {
                                         </thead>
                                         <tbody>
                                             {loadingList ? (
-                                                <tr>
-                                                    <td
-                                                        colSpan={6}
-                                                        className="px-5 py-10 text-center text-slate-400"
-                                                    >
-                                                        Memuat...
-                                                    </td>
-                                                </tr>
+                                                // ✅ Skeleton loading rows
+                                                Array.from({ length: 5 }).map((_, i) => (
+                                                    <tr key={i} className="border-t border-slate-100">
+                                                        {Array.from({ length: 6 }).map((__, j) => (
+                                                            <td key={j} className="px-5 py-3">
+                                                                <div className="h-4 bg-slate-100 rounded animate-pulse" />
+                                                            </td>
+                                                        ))}
+                                                    </tr>
+                                                ))
                                             ) : filteredTransaksi.length === 0 ? (
                                                 <tr>
-                                                    <td
-                                                        colSpan={6}
-                                                        className="px-5 py-10 text-center text-slate-400"
-                                                    >
-                                                        Belum ada transaksi
+                                                    <td colSpan={6} className="px-5 py-14 text-center">
+                                                        <Receipt className="w-8 h-8 text-slate-200 mx-auto mb-2" />
+                                                        <p className="text-sm text-slate-400 font-medium">
+                                                            Belum ada transaksi
+                                                        </p>
                                                     </td>
                                                 </tr>
                                             ) : (
@@ -513,17 +545,18 @@ export default function TransactionPage() {
                                                             #{t.id}
                                                         </td>
                                                         <td className="px-5 py-3 text-slate-600">
-                                                            {t.nama_pelanggan || "-"}
+                                                            {t.nama_pelanggan || (
+                                                                <span className="text-slate-300">—</span>
+                                                            )}
                                                         </td>
                                                         <td className="px-5 py-3 text-slate-500">
-                                                            {t.toko?.nama ?? "-"}
+                                                            {t.toko?.nama ?? "—"}
                                                         </td>
                                                         <td className="px-5 py-3 text-slate-500">
-                                                            {t.pengguna?.nama ?? "-"}
+                                                            {t.pengguna?.nama ?? "—"}
                                                         </td>
                                                         <td className="px-5 py-3 font-semibold text-slate-700">
-                                                            Rp{" "}
-                                                            {Number(t.total_bayar).toLocaleString("id-ID")}
+                                                            Rp {fmt(t.total_bayar)}
                                                         </td>
                                                         <td className="px-5 py-3">
                                                             <div className="flex items-center gap-2">
@@ -534,7 +567,6 @@ export default function TransactionPage() {
                                                                     Detail
                                                                     <ChevronRight className="w-3.5 h-3.5" />
                                                                 </button>
-                                                                {/* Void hanya untuk admin */}
                                                                 {isAdmin && (
                                                                     <button
                                                                         onClick={() => handleVoid(t)}
@@ -552,18 +584,79 @@ export default function TransactionPage() {
                                         </tbody>
                                     </table>
                                 </div>
+
+                                {/* ✅ Pagination */}
+                                {!loadingList && !listError && lastPage > 1 && (
+                                    <div className="flex items-center justify-between px-5 py-4 border-t border-slate-100">
+                                        <p className="text-xs text-slate-400">
+                                            Halaman {currentPage} dari {lastPage} &middot; {totalRows} transaksi
+                                        </p>
+                                        <div className="flex items-center gap-1">
+                                            <button
+                                                disabled={currentPage <= 1}
+                                                onClick={() => fetchTransaksi(currentPage - 1)}
+                                                className="w-8 h-8 rounded-full border border-slate-200 flex items-center justify-center text-slate-500 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition"
+                                            >
+                                                <PagePrev className="w-4 h-4" />
+                                            </button>
+
+                                            {/* Page numbers */}
+                                            {Array.from({ length: lastPage }, (_, i) => i + 1)
+                                                .filter((p) =>
+                                                    p === 1 ||
+                                                    p === lastPage ||
+                                                    Math.abs(p - currentPage) <= 1
+                                                )
+                                                .reduce<(number | "...")[]>((acc, p, idx, arr) => {
+                                                    if (idx > 0 && (p as number) - (arr[idx - 1] as number) > 1) {
+                                                        acc.push("...");
+                                                    }
+                                                    acc.push(p);
+                                                    return acc;
+                                                }, [])
+                                                .map((p, idx) =>
+                                                    p === "..." ? (
+                                                        <span key={`ellipsis-${idx}`} className="px-1 text-slate-300 text-sm">
+                                                            …
+                                                        </span>
+                                                    ) : (
+                                                        <button
+                                                            key={p}
+                                                            onClick={() => fetchTransaksi(p as number)}
+                                                            className={`w-8 h-8 rounded-full text-sm font-medium transition ${
+                                                                p === currentPage
+                                                                    ? "bg-blue-700 text-white"
+                                                                    : "border border-slate-200 text-slate-500 hover:bg-slate-50"
+                                                            }`}
+                                                        >
+                                                            {p}
+                                                        </button>
+                                                    )
+                                                )}
+
+                                            <button
+                                                disabled={currentPage >= lastPage}
+                                                onClick={() => fetchTransaksi(currentPage + 1)}
+                                                className="w-8 h-8 rounded-full border border-slate-200 flex items-center justify-center text-slate-500 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition"
+                                            >
+                                                <PageNext className="w-4 h-4" />
+                                            </button>
+                                        </div>
+                                    </div>
+                                )}
                             </div>
                         </div>
                     )}
 
-                    {/* ===== ADD VIEW ===== */}
+                    {/* ══════ ADD VIEW ══════ */}
                     {view === "add" && (
                         <form
                             onSubmit={handleSubmit}
                             className="max-w-5xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-5"
                         >
-                            {/* Kiri: info pelanggan + produk */}
+                            {/* Kiri */}
                             <div className="lg:col-span-2 space-y-4">
+
                                 {/* Info Pelanggan */}
                                 <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm">
                                     <p className="text-sm font-semibold text-slate-800 mb-4">
@@ -586,11 +679,10 @@ export default function TransactionPage() {
                                         />
                                     </div>
 
-                                    {/* Pilih toko hanya untuk admin */}
                                     {isAdmin && (
                                         <div className="mt-3">
                                             <label className="text-xs text-slate-400 mb-1 block">
-                                                Toko
+                                                Toko <span className="text-rose-400">*</span>
                                             </label>
                                             <div className="relative">
                                                 <select
@@ -599,18 +691,14 @@ export default function TransactionPage() {
                                                     required
                                                     className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm appearance-none focus:outline-none focus:ring-2 focus:ring-blue-500"
                                                 >
-                                                    <option value="" disabled>
-                                                        Pilih toko
-                                                    </option>
+                                                    <option value="" disabled>Pilih toko</option>
                                                     {tokoList.map((t) => (
                                                         <option key={t.id} value={t.id}>
                                                             {t.nama}
                                                         </option>
                                                     ))}
                                                 </select>
-                                                <div className="absolute inset-y-0 right-0 pr-4 flex items-center pointer-events-none">
-                                                    <ChevronDown className="w-4 h-4 text-slate-400" />
-                                                </div>
+                                                <ChevronDown className="absolute inset-y-0 right-4 my-auto w-4 h-4 text-slate-400 pointer-events-none" />
                                             </div>
                                         </div>
                                     )}
@@ -631,14 +719,11 @@ export default function TransactionPage() {
                                                 <option value="">Pilih produk</option>
                                                 {produkList.map((p) => (
                                                     <option key={p.id} value={p.id}>
-                                                        {p.nama} — Rp{" "}
-                                                        {Number(p.harga).toLocaleString("id-ID")}
+                                                        {p.nama} — Rp {fmt(p.harga)}
                                                     </option>
                                                 ))}
                                             </select>
-                                            <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
-                                                <ChevronDown className="w-4 h-4 text-slate-400" />
-                                            </div>
+                                            <ChevronDown className="absolute inset-y-0 right-3 my-auto w-4 h-4 text-slate-400 pointer-events-none" />
                                         </div>
                                         <input
                                             type="number"
@@ -656,7 +741,7 @@ export default function TransactionPage() {
                                         </button>
                                     </div>
 
-                                    {/* Cart Items */}
+                                    {/* Cart items */}
                                     <div className="mt-4 space-y-2">
                                         {cart.length === 0 ? (
                                             <p className="text-xs text-slate-400 text-center py-6">
@@ -673,15 +758,14 @@ export default function TransactionPage() {
                                                             {c.nama}
                                                         </p>
                                                         <p className="text-xs text-slate-400">
-                                                            Rp {c.harga.toLocaleString("id-ID")} / item
+                                                            Rp {fmt(c.harga)} / item &middot; Subtotal: Rp{" "}
+                                                            {fmt(c.harga * c.jumlah)}
                                                         </p>
                                                     </div>
                                                     <div className="flex items-center gap-2 shrink-0">
                                                         <button
                                                             type="button"
-                                                            onClick={() =>
-                                                                updateCartJumlah(c.produk_id, -1)
-                                                            }
+                                                            onClick={() => updateCartJumlah(c.produk_id, -1)}
                                                             className="w-7 h-7 rounded-full bg-slate-100 flex items-center justify-center hover:bg-slate-200 transition"
                                                         >
                                                             <Minus className="w-3.5 h-3.5" />
@@ -691,9 +775,7 @@ export default function TransactionPage() {
                                                         </span>
                                                         <button
                                                             type="button"
-                                                            onClick={() =>
-                                                                updateCartJumlah(c.produk_id, 1)
-                                                            }
+                                                            onClick={() => updateCartJumlah(c.produk_id, 1)}
                                                             className="w-7 h-7 rounded-full bg-slate-100 flex items-center justify-center hover:bg-slate-200 transition"
                                                         >
                                                             <Plus className="w-3.5 h-3.5" />
@@ -713,9 +795,10 @@ export default function TransactionPage() {
                                 </div>
                             </div>
 
-                            {/* Kanan: Ringkasan */}
+                            {/* Kanan — Ringkasan */}
                             <div className="bg-white rounded-2xl border border-slate-200 p-5 h-fit space-y-4 shadow-sm">
                                 <p className="text-sm font-semibold text-slate-800">Ringkasan</p>
+
                                 <div>
                                     <label className="text-xs text-slate-400 mb-1 block">
                                         Pajak (nominal, opsional)
@@ -732,19 +815,25 @@ export default function TransactionPage() {
                                 <div className="border-t border-slate-100 pt-3 space-y-1.5 text-sm">
                                     <div className="flex justify-between text-slate-500">
                                         <span>Subtotal</span>
-                                        <span>Rp {cartSubTotal.toLocaleString("id-ID")}</span>
+                                        <span>Rp {fmt(cartSubTotal)}</span>
                                     </div>
                                     <div className="flex justify-between text-slate-500">
                                         <span>Pajak</span>
-                                        <span>
-                                            Rp {(Number(pajak) || 0).toLocaleString("id-ID")}
-                                        </span>
+                                        <span>Rp {fmt(Number(pajak) || 0)}</span>
                                     </div>
                                     <div className="flex justify-between font-bold text-slate-800 text-base pt-1">
                                         <span>Total</span>
-                                        <span>Rp {totalBayar.toLocaleString("id-ID")}</span>
+                                        <span>Rp {fmt(totalBayar)}</span>
                                     </div>
                                 </div>
+
+                                {/* ✅ Form error banner */}
+                                {formError && (
+                                    <div className="flex items-start gap-2 bg-rose-50 border border-rose-100 rounded-xl px-4 py-3 text-rose-600 text-xs">
+                                        <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+                                        {formError}
+                                    </div>
+                                )}
 
                                 <button
                                     type="submit"
@@ -753,12 +842,11 @@ export default function TransactionPage() {
                                 >
                                     {submitting ? "Menyimpan..." : "Simpan Transaksi"}
                                 </button>
-
                                 <button
                                     type="button"
-                                    onClick={closeAddPage}
+                                    onClick={closeAdd}
                                     disabled={submitting}
-                                    className="w-full bg-red-50 hover:bg-red-100 text-red-500 font-semibold py-3 rounded-full transition disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+                                    className="w-full bg-red-50 hover:bg-red-100 text-red-500 font-semibold py-3 rounded-full transition disabled:opacity-50 text-sm"
                                 >
                                     Batal
                                 </button>
@@ -768,7 +856,7 @@ export default function TransactionPage() {
                 </main>
             </div>
 
-            {/* ===== MODAL DETAIL ===== */}
+            {/* ══════════ MODAL DETAIL ══════════ */}
             {selectedTransaksi && (
                 <div
                     className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4"
@@ -778,6 +866,7 @@ export default function TransactionPage() {
                         className="w-full max-w-md bg-white rounded-2xl shadow-xl"
                         onClick={(e) => e.stopPropagation()}
                     >
+                        {/* Modal header */}
                         <div className="flex items-center justify-between px-6 py-5 border-b border-slate-100">
                             <h2 className="text-lg font-bold text-slate-800">
                                 Transaksi #{selectedTransaksi.id}
@@ -790,36 +879,34 @@ export default function TransactionPage() {
                             </button>
                         </div>
 
-                        <div className="px-6 py-4 space-y-1 text-sm">
-                            <p>
-                                <span className="text-slate-400">Pelanggan:</span>{" "}
-                                <span className="text-slate-700 font-medium">
-                                    {selectedTransaksi.nama_pelanggan || "-"}
-                                </span>
-                            </p>
-                            <p>
-                                <span className="text-slate-400">Toko:</span>{" "}
-                                <span className="text-slate-700 font-medium">
-                                    {selectedTransaksi.toko?.nama ?? "-"}
-                                </span>
-                            </p>
-                            <p>
-                                <span className="text-slate-400">Kasir:</span>{" "}
-                                <span className="text-slate-700 font-medium">
-                                    {selectedTransaksi.pengguna?.nama ?? "-"}
-                                </span>
-                            </p>
+                        {/* Info */}
+                        <div className="px-6 py-4 space-y-1.5 text-sm">
+                            {[
+                                ["Pelanggan", selectedTransaksi.nama_pelanggan || "—"],
+                                ["No HP",     selectedTransaksi.no_hp || "—"],
+                                ["Toko",      selectedTransaksi.toko?.nama ?? "—"],
+                                ["Kasir",     selectedTransaksi.pengguna?.nama ?? "—"],
+                            ].map(([label, value]) => (
+                                <p key={label}>
+                                    <span className="text-slate-400 w-24 inline-block">{label}:</span>
+                                    <span className="text-slate-700 font-medium">{value}</span>
+                                </p>
+                            ))}
                         </div>
 
-                        {/* Detail items */}
+                        {/* Items */}
                         <div className="px-6 border-t border-slate-100 pt-3 pb-2 space-y-2">
+                            <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-2">
+                                Item
+                            </p>
                             {selectedTransaksi.detail_transaksi?.map((d) => (
                                 <div key={d.id} className="flex justify-between text-sm">
                                     <span className="text-slate-600">
-                                        {d.produk?.nama ?? `Produk #${d.produk_id}`} ×{d.jumlah}
+                                        {d.produk?.nama ?? `Produk #${d.produk_id}`}{" "}
+                                        <span className="text-slate-400">×{d.jumlah}</span>
                                     </span>
                                     <span className="text-slate-700 font-medium">
-                                        Rp {Number(d.sub_total).toLocaleString("id-ID")}
+                                        Rp {fmt(d.sub_total)}
                                     </span>
                                 </div>
                             ))}
@@ -829,21 +916,15 @@ export default function TransactionPage() {
                         <div className="px-6 border-t border-slate-100 pt-3 pb-5 space-y-1 text-sm">
                             <div className="flex justify-between text-slate-500">
                                 <span>Subtotal</span>
-                                <span>
-                                    Rp {Number(selectedTransaksi.sub_total).toLocaleString("id-ID")}
-                                </span>
+                                <span>Rp {fmt(selectedTransaksi.sub_total)}</span>
                             </div>
                             <div className="flex justify-between text-slate-500">
                                 <span>Pajak</span>
-                                <span>
-                                    Rp {Number(selectedTransaksi.pajak).toLocaleString("id-ID")}
-                                </span>
+                                <span>Rp {fmt(selectedTransaksi.pajak)}</span>
                             </div>
                             <div className="flex justify-between font-bold text-slate-800 text-base pt-1">
                                 <span>Total</span>
-                                <span>
-                                    Rp {Number(selectedTransaksi.total_bayar).toLocaleString("id-ID")}
-                                </span>
+                                <span>Rp {fmt(selectedTransaksi.total_bayar)}</span>
                             </div>
                         </div>
                     </div>

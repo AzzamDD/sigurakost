@@ -19,4 +19,27 @@ class DashboardController extends Controller
             'total_produk'   => Produk::count(),
         ]);
     }
+
+    // ✅ Endpoint baru untuk latest transactions di dashboard
+    public function latestTransactions(Request $request)
+    {
+        $isAdmin = trim(strtolower($request->user()->role?->nama ?? '')) === 'admin';
+
+        $query = Transaksi::with([
+            'detailTransaksi.produk.kategori',
+            'toko',
+            'pengguna',
+        ])->orderBy('id', 'desc')->limit(5);
+
+        if (!$isAdmin) {
+            $toko = Toko::where('operator_id', $request->user()->id)->first();
+            if (!$toko) {
+                // Kasir tanpa toko → kembalikan array kosong, bukan error
+                return response()->json([]);
+            }
+            $query->where('toko_id', $toko->id);
+        }
+
+        return response()->json($query->get());
+    }
 }

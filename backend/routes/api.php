@@ -27,6 +27,10 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/logout', [AuthController::class, 'logout']);
     Route::get('/me', [AuthController::class, 'me']);
 
+    Route::get('/dashboard/latest-transactions', [DashboardController::class, 'latestTransactions']);
+    Route::get('/dashboard/stats', [DashboardController::class, 'stats']);
+
+
     Route::put('/profile', [ProfileController::class, 'updateProfile']);
     Route::put('/password', [ProfileController::class, 'changePassword']);
     Route::post('/profile/photo', [PhotoUploadController::class, 'upload']);
@@ -66,8 +70,6 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/stok-toko', [StokTokoController::class, 'store']);
     Route::put('/stok-toko/{id}', [StokTokoController::class, 'update']);
     Route::delete('/stok-toko/{id}', [StokTokoController::class, 'destroy']);
-
-    Route::get('/dashboard/stats', [DashboardController::class, 'stats']);
 
     Route::get('/transaksi', [TransaksiController::class, 'index']);
     Route::get('/transaksi/{id}', [TransaksiController::class, 'show']);

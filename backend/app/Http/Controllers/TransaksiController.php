@@ -14,9 +14,10 @@ use Illuminate\Validation\ValidationException;
 
 class TransaksiController extends Controller
 {
+    // ✅ Konsisten lowercase + trim, sama dengan frontend
     private function isAdmin(Request $request): bool
     {
-        return $request->user()->role?->nama === 'admin';
+        return trim(strtolower($request->user()->role?->nama ?? '')) === 'admin';
     }
 
     private function tokoMilikKasir(Request $request): ?Toko
@@ -30,30 +31,40 @@ class TransaksiController extends Controller
             ->orderBy('id', 'desc');
 
         if ($this->isAdmin($request)) {
+            // Admin boleh filter by toko
             if ($request->filled('toko_id')) {
                 $query->where('toko_id', $request->toko_id);
             }
         } else {
+            // Kasir hanya lihat transaksi toko miliknya
             $toko = $this->tokoMilikKasir($request);
             if (!$toko) {
                 return response()->json([
                     'message' => 'Akun ini belum ditugaskan ke toko manapun. Hubungi admin.',
+                    'code'    => 'NO_TOKO',
                 ], 403);
             }
             $query->where('toko_id', $toko->id);
         }
 
-        return response()->json($query->paginate($request->get('per_page', 15)));
+        $perPage = (int) $request->get('per_page', 15);
+        return response()->json($query->paginate($perPage));
     }
 
     public function show(Request $request, $id)
     {
-        $transaksi = Transaksi::with(['detailTransaksi.produk', 'toko', 'pengguna'])->findOrFail($id);
+        $transaksi = Transaksi::with([
+            'detailTransaksi.produk',
+            'toko',
+            'pengguna',
+        ])->findOrFail($id);
 
         if (!$this->isAdmin($request)) {
             $toko = $this->tokoMilikKasir($request);
             if (!$toko || $transaksi->toko_id !== $toko->id) {
-                return response()->json(['message' => 'Anda tidak punya akses ke transaksi ini.'], 403);
+                return response()->json([
+                    'message' => 'Anda tidak punya akses ke transaksi ini.',
+                ], 403);
             }
         }
 
@@ -65,12 +76,12 @@ class TransaksiController extends Controller
         $isAdmin = $this->isAdmin($request);
 
         $rules = [
-            'nama_pelanggan' => 'nullable|string|max:255',
-            'no_hp' => 'nullable|string|max:20',
-            'pajak' => 'nullable|integer|min:0',
-            'items' => 'required|array|min:1',
-            'items.*.produk_id' => 'required|integer|exists:produk,id',
-            'items.*.jumlah' => 'required|integer|min:1',
+            'nama_pelanggan'       => 'nullable|string|max:255',
+            'no_hp'                => 'nullable|string|max:20',
+            'pajak'                => 'nullable|integer|min:0',
+            'items'                => 'required|array|min:1',
+            'items.*.produk_id'    => 'required|integer|exists:produk,id',
+            'items.*.jumlah'       => 'required|integer|min:1',
         ];
 
         if ($isAdmin) {
@@ -86,6 +97,7 @@ class TransaksiController extends Controller
             if (!$toko) {
                 return response()->json([
                     'message' => 'Akun ini belum ditugaskan ke toko manapun. Hubungi admin.',
+                    'code'    => 'NO_TOKO',
                 ], 403);
             }
             $tokoId = $toko->id;
@@ -93,7 +105,7 @@ class TransaksiController extends Controller
 
         try {
             $transaksi = DB::transaction(function () use ($validated, $tokoId) {
-                $subTotal = 0;
+                $subTotal   = 0;
                 $detailRows = [];
 
                 foreach ($validated['items'] as $item) {
@@ -106,41 +118,41 @@ class TransaksiController extends Controller
 
                     if (!$stokToko) {
                         throw ValidationException::withMessages([
-                            'items' => "Produk '{$produk->nama}' tidak terdaftar di stok toko ini.",
+                            'items' => ["Produk '{$produk->nama}' tidak terdaftar di stok toko ini."],
                         ]);
                     }
 
                     if ($stokToko->stok < $item['jumlah']) {
                         throw ValidationException::withMessages([
-                            'items' => "Stok '{$produk->nama}' tidak cukup. Sisa stok: {$stokToko->stok}.",
+                            'items' => ["Stok '{$produk->nama}' tidak cukup. Sisa stok: {$stokToko->stok}."],
                         ]);
                     }
 
-                    $hargaSatuan = $produk->harga;
+                    $hargaSatuan  = (int) $produk->harga;
                     $subTotalItem = $hargaSatuan * $item['jumlah'];
-                    $subTotal += $subTotalItem;
+                    $subTotal    += $subTotalItem;
 
                     $stokToko->decrement('stok', $item['jumlah']);
 
                     $detailRows[] = [
                         'produk_id' => $item['produk_id'],
-                        'jumlah' => $item['jumlah'],
-                        'harga' => $hargaSatuan,
+                        'jumlah'    => $item['jumlah'],
+                        'harga'     => $hargaSatuan,
                         'sub_total' => $subTotalItem,
                     ];
                 }
 
-                $pajak = $validated['pajak'] ?? 0;
+                $pajak      = (int) ($validated['pajak'] ?? 0);
                 $totalBayar = $subTotal + $pajak;
 
                 $transaksi = Transaksi::create([
                     'nama_pelanggan' => $validated['nama_pelanggan'] ?? null,
-                    'no_hp' => $validated['no_hp'] ?? null,
-                    'sub_total' => $subTotal,
-                    'pajak' => $pajak,
-                    'total_bayar' => $totalBayar,
-                    'toko_id' => $tokoId,
-                    'pengguna_id' => Auth::id(),
+                    'no_hp'          => $validated['no_hp'] ?? null,
+                    'sub_total'      => $subTotal,
+                    'pajak'          => $pajak,
+                    'total_bayar'    => $totalBayar,
+                    'toko_id'        => $tokoId,
+                    'pengguna_id'    => Auth::id(),
                 ]);
 
                 foreach ($detailRows as $row) {
@@ -148,24 +160,33 @@ class TransaksiController extends Controller
                     DetailTransaksi::create($row);
                 }
 
-                return $transaksi->load('detailTransaksi.produk');
+                return $transaksi->load(['detailTransaksi.produk', 'toko', 'pengguna']);
             });
 
             return response()->json($transaksi, 201);
+
         } catch (ValidationException $e) {
             return response()->json([
-                'message' => $e->getMessage(),
-                'errors' => $e->errors(),
+                'message' => collect($e->errors())->flatten()->first(),
+                'errors'  => $e->errors(),
             ], 422);
         } catch (\Throwable $e) {
-            // CATCH ERROR GENERAL SQL BIAR BISA DI-DEBUG
             return response()->json([
                 'message' => 'Gagal menyimpan transaksi: ' . $e->getMessage(),
             ], 500);
         }
     }
-    public function destroy($id)
+
+    // ✅ destroy() — proteksi sudah di route middleware('role:admin')
+    //    tapi tetap ada fallback manual biar aman kalau middleware dilepas
+    public function destroy(Request $request, $id)
     {
+        if (!$this->isAdmin($request)) {
+            return response()->json([
+                'message' => 'Hanya admin yang dapat membatalkan transaksi.',
+            ], 403);
+        }
+
         $transaksi = Transaksi::with('detailTransaksi')->findOrFail($id);
 
         DB::transaction(function () use ($transaksi) {
@@ -178,6 +199,8 @@ class TransaksiController extends Controller
             $transaksi->delete();
         });
 
-        return response()->json(['message' => 'Transaksi dibatalkan, stok sudah dikembalikan.']);
+        return response()->json([
+            'message' => 'Transaksi dibatalkan, stok sudah dikembalikan.',
+        ]);
     }
 }

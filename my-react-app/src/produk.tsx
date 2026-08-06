@@ -733,15 +733,6 @@ export default function ProductsPage() {
 
                         <div className="rounded-2xl border border-slate-200 p-4 flex items-start justify-between gap-4">
                             <div className="min-w-0">
-                                <div className="flex justify-end mt-4">
-                                    <button
-                                        onClick={() => handleDeleteProduct(selectedProduct)}
-                                        className="inline-flex items-center gap-1.5 bg-rose-50 hover:bg-rose-100 text-rose-600 text-sm font-semibold px-4 py-2 rounded-full transition"
-                                    >
-                                        <Trash2 className="w-4 h-4" />
-                                        Hapus Produk
-                                    </button>
-                                </div>
                                 <div className="flex items-center gap-2 mb-3">
                                     <span className="text-base font-bold text-slate-800 truncate">
                                         {selectedProduct.nama}
