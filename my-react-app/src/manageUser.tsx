@@ -27,13 +27,16 @@ import {
 } from "lucide-react";
 
 const API_URL = (import.meta.env.VITE_API_URL || "http://localhost:8000") + "/api";
-const MAX_FILE_SIZE = 2 * 1024 * 1024; // 2MB
+const MAX_FILE_SIZE = 2 * 1024 * 1024;
 
-/* ---------- Types ---------- */
 type RoleData = {
     id: number;
     nama: string;
-    deskripsi?: string | null;
+};
+
+type TokoItem = {
+    id: number;
+    nama: string;
 };
 
 type UserItem = {
@@ -44,13 +47,15 @@ type UserItem = {
     foto: string | null;
     role_id: number | null;
     role?: RoleData | null;
+    toko?: TokoItem | null;
 };
 
 type UserForm = {
     nama: string;
     no_hp: string;
     email: string;
-    role_id: string; // string biar kompatibel <select>
+    role_id: string;
+    toko_id: string; // ✅ Pilihan merchant
     password: string;
     passwordConfirmation: string;
     foto: string | null;
@@ -63,6 +68,7 @@ const emptyUserForm: UserForm = {
     no_hp: "",
     email: "",
     role_id: "",
+    toko_id: "",
     password: "",
     passwordConfirmation: "",
     foto: null,
@@ -77,6 +83,7 @@ export default function ManageUserPage() {
     const [users, setUsers] = useState<UserItem[]>([]);
     const [loadingUsers, setLoadingUsers] = useState(true);
     const [roles, setRoles] = useState<RoleData[]>([]);
+    const [tokoList, setTokoList] = useState<TokoItem[]>([]);
     const [loadingRoles, setLoadingRoles] = useState(true);
 
     const [formData, setFormData] = useState<UserForm>(emptyUserForm);
@@ -86,18 +93,17 @@ export default function ManageUserPage() {
     const [submitting, setSubmitting] = useState(false);
     const [searchQuery, setSearchQuery] = useState("");
 
-const menuItems = [
-    { label: "Beranda", icon: Home, path: "/dashboard", active: true },
-    { label: "Produk", icon: Package, path: "/produk", active: false },
-    { label: "Kategori", icon: Tags, path: "/kategori", active: false },
-    { label: "Warehouse", icon: WarehouseIcon, path: "/warehouse", active: false },
-    { label: "Merchant", icon: Store, path: "/merchant", active: false },
-    { label: "Transaksi", icon: Receipt, path: "/transaksi", active: false },
-];
+    const menuItems = [
+        { label: "Beranda", icon: Home, path: "/dashboard", active: false },
+        { label: "Produk", icon: Package, path: "/produk", active: false },
+        { label: "Kategori", icon: Tags, path: "/kategori", active: false },
+        { label: "Warehouse", icon: WarehouseIcon, path: "/warehouse", active: false },
+        { label: "Merchant", icon: Store, path: "/merchant", active: false },
+        { label: "Transaksi", icon: Receipt, path: "/transaksi", active: false },
+    ];
 
     const accountItems = [
         { label: "Roles", icon: ShieldCheck, path: "/role", active: false },
-        // ✅ disamakan casing-nya jadi "/manageUser" — cek route definition kamu
         { label: "Manajemen User", icon: Users, path: "/manageUser", active: true },
         { label: "Settings", icon: Settings, path: "/settings", active: false },
     ];
@@ -107,7 +113,6 @@ const menuItems = [
         return { Authorization: `Bearer ${token}`, Accept: "application/json" };
     };
 
-    /* ---------- Fetch ---------- */
     const fetchUsers = async () => {
         setLoadingUsers(true);
         try {
@@ -128,9 +133,19 @@ const menuItems = [
         }
     };
 
+    const fetchToko = async () => {
+        try {
+            const res = await fetch(`${API_URL}/toko`, { headers: authHeaders() });
+            if (res.ok) setTokoList(await res.json());
+        } catch {
+            // ignore
+        }
+    };
+
     useEffect(() => {
         fetchUsers();
         fetchRoles();
+        fetchToko();
     }, []);
 
     useEffect(() => {
@@ -145,11 +160,11 @@ const menuItems = [
         return (
             u.nama.toLowerCase().includes(q) ||
             u.email.toLowerCase().includes(q) ||
-            (u.role?.nama ?? "").toLowerCase().includes(q)
+            (u.role?.nama ?? "").toLowerCase().includes(q) ||
+            (u.toko?.nama ?? "").toLowerCase().includes(q)
         );
     });
 
-    /* ---------- Form ---------- */
     const handleFormChange = (
         e: ChangeEvent<HTMLInputElement | HTMLSelectElement>
     ) => {
@@ -171,6 +186,7 @@ const menuItems = [
             no_hp: u.no_hp ?? "",
             email: u.email,
             role_id: u.role_id ? String(u.role_id) : "",
+            toko_id: u.toko?.id ? String(u.toko.id) : "",
             password: "",
             passwordConfirmation: "",
             foto: u.foto,
@@ -210,7 +226,6 @@ const menuItems = [
         e.target.value = "";
     };
 
-    // Reuse endpoint upload yang sama dengan Merchant — folder beda biar terorganisir
     const uploadPhoto = async (file: File): Promise<string> => {
         const fd = new FormData();
         fd.append("image", file);
@@ -228,7 +243,6 @@ const menuItems = [
     const submitUser = async (e: FormEvent<HTMLFormElement>) => {
         e.preventDefault();
 
-        // Validasi password cuma dicek kalau diisi (edit) atau wajib (add)
         if (view === "add" || formData.password || formData.passwordConfirmation) {
             if (formData.password !== formData.passwordConfirmation) {
                 alert("Password dan konfirmasi password tidak sama.");
@@ -260,9 +274,9 @@ const menuItems = [
                 no_hp: formData.no_hp,
                 foto: fotoUrl,
                 role_id: formData.role_id ? Number(formData.role_id) : null,
+                toko_id: formData.toko_id ? Number(formData.toko_id) : null,
             };
 
-            // ✅ Password cuma dikirim kalau diisi — biar gak overwrite password lama pas edit kosong
             if (formData.password) {
                 payload.password = formData.password;
             }
@@ -507,14 +521,21 @@ const menuItems = [
                                                     </div>
                                                 </div>
 
-                                                <div className="flex items-center gap-2 shrink-0">
-                                                    <ShieldCheck className="w-4 h-4 text-slate-400" />
+                                                <div className="flex items-center gap-6 shrink-0">
                                                     <div>
                                                         <p className="text-[11px] text-slate-400 leading-none mb-1">
                                                             User Role
                                                         </p>
-                                                        <p className="text-sm font-semibold text-slate-700">
+                                                        <p className="text-sm font-semibold text-slate-700 capitalize">
                                                             {u.role?.nama ?? "Belum ada role"}
+                                                        </p>
+                                                    </div>
+                                                    <div>
+                                                        <p className="text-[11px] text-slate-400 leading-none mb-1">
+                                                            Merchant / Toko
+                                                        </p>
+                                                        <p className="text-sm font-semibold text-blue-700">
+                                                            {u.toko?.nama ?? "-"}
                                                         </p>
                                                     </div>
                                                 </div>
@@ -643,7 +664,7 @@ const menuItems = [
                                             />
                                         </div>
 
-                                        {/* Role — dinamis dari /role, bukan hardcode */}
+                                        {/* Role */}
                                         <div className="relative">
                                             <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
                                                 <ShieldCheck className="w-5 h-5 text-slate-400" />
@@ -661,6 +682,31 @@ const menuItems = [
                                                 {roles.map((r) => (
                                                     <option key={r.id} value={r.id}>
                                                         {r.nama}
+                                                    </option>
+                                                ))}
+                                            </select>
+                                            <div className="absolute inset-y-0 right-0 pr-4 flex items-center pointer-events-none">
+                                                <ChevronDown className="w-5 h-5 text-slate-400" />
+                                            </div>
+                                        </div>
+
+                                        {/* ✅ Pilihan Merchant / Toko */}
+                                        <div className="relative">
+                                            <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                                                <Store className="w-5 h-5 text-slate-400" />
+                                            </div>
+                                            <select
+                                                name="toko_id"
+                                                value={formData.toko_id}
+                                                onChange={handleFormChange}
+                                                className="w-full pl-12 pr-10 py-3 bg-white border border-slate-200 rounded-xl text-sm text-slate-700 appearance-none focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
+                                            >
+                                                <option value="">
+                                                    Tanpa Merchant / Toko (Opsional)
+                                                </option>
+                                                {tokoList.map((t) => (
+                                                    <option key={t.id} value={t.id}>
+                                                        {t.nama}
                                                     </option>
                                                 ))}
                                             </select>
@@ -733,11 +779,11 @@ const menuItems = [
                                     </h3>
                                     <ul className="space-y-4">
                                         {[
-                                            "Masukkan detail pengguna dengan akurat dan lengkap untuk memastikan fungsi sistem yang tepat.",
-                                            "Tetapkan role jika diperlukan untuk memastikan akses yang sesuai untuk fungsi mereka.",
-                                            "Buat password awal untuk memastikan akses pengguna yang aman sambil menjaga kerahasiaan akun.",
-                                            "Pastikan Email dan Nomor Telepon benar untuk menghindari kesalahan.",
-                                            "Ulas secara menyeluruh semua detail sebelum membuat untuk memastikan akurasi dan mencegah kesalahan potensial.",
+                                            "Masukkan detail pengguna dengan akurat dan lengkap.",
+                                            "Tetapkan role yang sesuai untuk menentukan hak akses pengguna.",
+                                            "Pilih Merchant/Toko jika pengguna tersebut bertindak sebagai Kasir Toko.",
+                                            "Buat password awal yang aman dan mudah diingat.",
+                                            "Ulas kembali semua detail sebelum menekan tombol simpan.",
                                         ].map((text, i) => (
                                             <li key={i} className="flex gap-3 items-start">
                                                 <CheckCircle2 className="w-5 h-5 text-green-500 shrink-0" />

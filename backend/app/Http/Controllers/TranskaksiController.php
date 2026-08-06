@@ -157,9 +157,13 @@ class TransaksiController extends Controller
                 'message' => $e->getMessage(),
                 'errors' => $e->errors(),
             ], 422);
+        } catch (\Throwable $e) {
+            // CATCH ERROR GENERAL SQL BIAR BISA DI-DEBUG
+            return response()->json([
+                'message' => 'Gagal menyimpan transaksi: ' . $e->getMessage(),
+            ], 500);
         }
     }
-
     public function destroy($id)
     {
         $transaksi = Transaksi::with('detailTransaksi')->findOrFail($id);

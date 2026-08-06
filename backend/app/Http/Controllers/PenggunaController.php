@@ -3,108 +3,100 @@
 namespace App\Http\Controllers;
 
 use App\Models\Pengguna;
+use App\Models\Toko;
 use Illuminate\Http\Request;
-use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Validation\Rule;
+use Illuminate\Support\Facades\DB;
 
 class PenggunaController extends Controller
 {
-    public function index(): JsonResponse
+    public function index()
     {
-        $pengguna = Pengguna::query()
-            ->select('id', 'nama', 'email', 'foto', 'no_hp', 'role_id')
-            ->with('role:id,nama')
-            ->orderBy('nama')
-            ->get();
-
+        $pengguna = Pengguna::with(['role', 'toko'])->get();
         return response()->json($pengguna);
     }
 
-    public function show(int $id): JsonResponse
+    public function show($id)
     {
-        $pengguna = Pengguna::select('id', 'nama', 'email', 'foto', 'no_hp', 'role_id')
-            ->with('role:id,nama')
-            ->find($id);
-
-        if (!$pengguna) {
-            return response()->json(['message' => 'User tidak ditemukan'], 404);
-        }
-
+        $pengguna = Pengguna::with(['role', 'toko'])->findOrFail($id);
         return response()->json($pengguna);
     }
 
-    public function store(Request $request): JsonResponse
+    public function store(Request $request)
     {
-        $validated = $request->validate([
-            'nama'     => 'required|string|max:150',
-            'email'    => 'required|email|max:150|unique:pengguna,email',
-            'no_hp'    => 'nullable|string|max:30',
-            'foto'     => 'nullable|string',
-            'role_id'  => 'nullable|exists:role,id',
+        $request->validate([
+            'nama' => 'required|string|max:150',
+            'email' => 'required|email|unique:pengguna,email',
             'password' => 'required|string|min:6',
+            'no_hp' => 'nullable|string|max:20',
+            'role_id' => 'nullable|exists:role,id',
+            'toko_id' => 'nullable|exists:toko,id',
         ]);
 
-        $validated['password'] = Hash::make($validated['password']);
+        return DB::transaction(function () use ($request) {
+            $pengguna = Pengguna::create([
+                'nama' => $request->nama,
+                'email' => $request->email,
+                'password' => Hash::make($request->password),
+                'foto' => $request->foto,
+                'no_hp' => $request->no_hp,
+                'role_id' => $request->role_id,
+            ]);
 
-        $pengguna = Pengguna::create($validated);
-        $pengguna->load('role:id,nama');
+            if ($request->filled('toko_id')) {
+                // Lepas penjaga lama di toko tersebut jika ada
+                Toko::where('id', $request->toko_id)->update(['operator_id' => $pengguna->id]);
+            }
 
-        return response()->json($pengguna, 201);
+            return response()->json($pengguna->load(['role', 'toko']), 201);
+        });
     }
 
-    public function update(Request $request, int $id): JsonResponse
+    public function update(Request $request, $id)
     {
-        $pengguna = Pengguna::find($id);
+        $pengguna = Pengguna::findOrFail($id);
 
-        if (!$pengguna) {
-            return response()->json(['message' => 'User tidak ditemukan'], 404);
-        }
-
-        $validated = $request->validate([
-            'nama'     => 'required|string|max:150',
-            'email'    => [
-                'required',
-                'email',
-                'max:150',
-                Rule::unique('pengguna', 'email')->ignore($pengguna->id),
-            ],
-            'no_hp'    => 'nullable|string|max:30',
-            'foto'     => 'nullable|string',
-            'role_id'  => 'nullable|exists:role,id',
-            'password' => 'nullable|string|min:6', // ✅ opsional saat edit
+        $request->validate([
+            'nama' => 'required|string|max:150',
+            'email' => "required|email|unique:pengguna,email,{$id}",
+            'no_hp' => 'nullable|string|max:20',
+            'role_id' => 'nullable|exists:role,id',
+            'toko_id' => 'nullable',
         ]);
 
-        // ✅ Kalau password dikosongkan, jangan diupdate — biar password lama tetap aman
-        if (!empty($validated['password'])) {
-            $validated['password'] = Hash::make($validated['password']);
-        } else {
-            unset($validated['password']);
-        }
+        return DB::transaction(function () use ($request, $pengguna) {
+            $data = [
+                'nama' => $request->nama,
+                'email' => $request->email,
+                'foto' => $request->foto,
+                'no_hp' => $request->no_hp,
+                'role_id' => $request->role_id,
+            ];
 
-        $pengguna->update($validated);
-        $pengguna->load('role:id,nama');
+            if ($request->filled('password')) {
+                $data['password'] = Hash::make($request->password);
+            }
 
-        return response()->json($pengguna);
+            $pengguna->update($data);
+
+            // Lepas toko lama jika pernah di-assign
+            Toko::where('operator_id', $pengguna->id)->update(['operator_id' => null]);
+
+            // Pasang toko baru jika dipilih
+            if ($request->filled('toko_id')) {
+                Toko::where('id', $request->toko_id)->update(['operator_id' => $pengguna->id]);
+            }
+
+            return response()->json($pengguna->load(['role', 'toko']));
+        });
     }
 
-    public function destroy(int $id): JsonResponse
+    public function destroy($id)
     {
-        $pengguna = Pengguna::find($id);
-
-        if (!$pengguna) {
-            return response()->json(['message' => 'User tidak ditemukan'], 404);
-        }
-
-        // ✅ Cegah hapus user yang masih jadi keeper di toko manapun
-        if ($pengguna->tokoDiurus()->count() > 0) {
-            return response()->json([
-                'message' => 'User tidak bisa dihapus karena masih menjadi keeper di salah satu toko',
-            ], 422);
-        }
-
+        $pengguna = Pengguna::findOrFail($id);
+        Toko::where('operator_id', $pengguna->id)->update(['operator_id' => null]);
         $pengguna->delete();
 
-        return response()->json(['message' => 'User berhasil dihapus']);
+        return response()->json(['message' => 'Pengguna berhasil dihapus']);
     }
 }

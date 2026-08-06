@@ -3,7 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Foundation\Auth\User as Authenticatable;
-use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Laravel\Sanctum\HasApiTokens;
 
 class Pengguna extends Authenticatable
@@ -38,9 +38,8 @@ class Pengguna extends Authenticatable
         return $this->belongsTo(Role::class, 'role_id');
     }
 
-    // ✅ ditambahkan — buat cek sebelum user dihapus (dipakai di destroy())
-    public function tokoDiurus(): HasMany
+    public function toko(): HasOne
     {
-        return $this->hasMany(Toko::class, 'operator_id');
+        return $this->hasOne(Toko::class, 'operator_id');
     }
 }

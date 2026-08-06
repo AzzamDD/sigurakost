@@ -65,25 +65,26 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::put('/stok-toko/{id}', [StokTokoController::class, 'update']);
     Route::delete('/stok-toko/{id}', [StokTokoController::class, 'destroy']);
 
-    Route::get('/role', [RoleController::class, 'index']);
-    Route::get('/role/{id}', [RoleController::class, 'show']);
-    Route::post('/role', [RoleController::class, 'store']);
-    Route::put('/role/{id}', [RoleController::class, 'update']);
-    Route::delete('/role/{id}', [RoleController::class, 'destroy']);
-
-    Route::get('/pengguna', [PenggunaController::class, 'index']);
-    Route::get('/pengguna/{id}', [PenggunaController::class, 'show']);
-    Route::post('/pengguna', [PenggunaController::class, 'store']);
-    Route::put('/pengguna/{id}', [PenggunaController::class, 'update']);
-    Route::delete('/pengguna/{id}', [PenggunaController::class, 'destroy']);
-
     Route::get('/dashboard/stats', [DashboardController::class, 'stats']);
 
     Route::get('/transaksi', [TransaksiController::class, 'index']);
     Route::get('/transaksi/{id}', [TransaksiController::class, 'show']);
     Route::post('/transaksi', [TransaksiController::class, 'store']);
 
+    // 🔒 KHUSUS ADMIN SAJA
     Route::middleware('role:admin')->group(function () {
         Route::delete('/transaksi/{id}', [TransaksiController::class, 'destroy']);
+
+        Route::get('/role', [RoleController::class, 'index']);
+        Route::get('/role/{id}', [RoleController::class, 'show']);
+        Route::post('/role', [RoleController::class, 'store']);
+        Route::put('/role/{id}', [RoleController::class, 'update']);
+        Route::delete('/role/{id}', [RoleController::class, 'destroy']);
+
+        Route::get('/pengguna', [PenggunaController::class, 'index']);
+        Route::get('/pengguna/{id}', [PenggunaController::class, 'show']);
+        Route::post('/pengguna', [PenggunaController::class, 'store']);
+        Route::put('/pengguna/{id}', [PenggunaController::class, 'update']);
+        Route::delete('/pengguna/{id}', [PenggunaController::class, 'destroy']);
     });
 });
