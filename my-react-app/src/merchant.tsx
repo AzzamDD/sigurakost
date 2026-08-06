@@ -190,16 +190,6 @@ export default function MerchantPage() {
     }
   };
 
-  const fetchProduk = async () => {
-    setLoadingProduk(true);
-    try {
-      const res = await fetch(`${API_URL}/produk`, { headers: authHeaders() });
-      if (res.ok) setProdukList(await res.json());
-    } finally {
-      setLoadingProduk(false);
-    }
-  };
-
   const fetchGudang = async () => {
     try {
       const res = await fetch(`${API_URL}/gudang`, { headers: authHeaders() });
@@ -247,7 +237,6 @@ export default function MerchantPage() {
 
   useEffect(() => {
     fetchToko();
-    fetchProduk();
     fetchGudang();
     fetchPengguna(); // ✅ dipanggil di sini
   }, []);
