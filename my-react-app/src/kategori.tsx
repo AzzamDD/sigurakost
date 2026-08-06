@@ -72,9 +72,9 @@ export default function CategoriesPage() {
     const [searchQuery, setSearchQuery] = useState("");
 
 const menuItems = [
-    { label: "Beranda", icon: Home, path: "/dashboard", active: true },
+    { label: "Beranda", icon: Home, path: "/dashboard", active: false },
     { label: "Produk", icon: Package, path: "/produk", active: false },
-    { label: "Kategori", icon: Tags, path: "/kategori", active: false },
+    { label: "Kategori", icon: Tags, path: "/kategori", active: true },
     { label: "Warehouse", icon: WarehouseIcon, path: "/warehouse", active: false },
     { label: "Merchant", icon: Store, path: "/merchant", active: false },
     { label: "Transaksi", icon: Receipt, path: "/transaksi", active: false },
