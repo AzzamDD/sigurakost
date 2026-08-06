@@ -60,6 +60,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::put('/toko/{id}', [TokoController::class, 'update']);
     Route::delete('/toko/{id}', [TokoController::class, 'destroy']);
 
+    Route::post('/stok-toko/transfer', [StokTokoController::class, 'transfer']);
     Route::get('/stok-toko', [StokTokoController::class, 'index']);
     Route::post('/stok-toko', [StokTokoController::class, 'store']);
     Route::put('/stok-toko/{id}', [StokTokoController::class, 'update']);

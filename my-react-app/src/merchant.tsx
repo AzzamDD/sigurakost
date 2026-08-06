@@ -77,6 +77,14 @@ type TokoData = {
   stok_toko_count?: number;
 };
 
+type GudangStokOption = {
+  id: number;
+  produk_id: number;
+  gudang_id: number;
+  stok: number;
+  produk: ProdukData;
+};
+
 type StokTokoData = {
   id: number;
   toko_id: number;
@@ -137,9 +145,11 @@ export default function MerchantPage() {
   const [loadingProduk, setLoadingProduk] = useState(true);
   const [gudangList, setGudangList] = useState<GudangData[]>([]);
   const [isAssignOpen, setIsAssignOpen] = useState(false);
-  const [assignProdukId, setAssignProdukId] = useState<string>("");
-  const [assignStok, setAssignStok] = useState<string>("");
   const [assignGudangId, setAssignGudangId] = useState<string>("");
+  const [gudangStokList, setGudangStokList] = useState<GudangStokOption[]>([]);
+  const [loadingGudangStok, setLoadingGudangStok] = useState(false);
+  const [assignProdukId, setAssignProdukId] = useState<string>("");
+  const [assignJumlah, setAssignJumlah] = useState<string>("");
   const [submittingAssign, setSubmittingAssign] = useState(false);
   const [assignError, setAssignError] = useState<string | null>(null);
 
@@ -147,15 +157,18 @@ export default function MerchantPage() {
   const [stockTarget, setStockTarget] = useState<StokTokoData | null>(null);
   const [stockQty, setStockQty] = useState<number>(1);
   const [submittingStock, setSubmittingStock] = useState(false);
+  const [addStockGudangId, setAddStockGudangId] = useState<string>("");
+  const [addStockGudangStokList, setAddStockGudangStokList] = useState<GudangStokOption[]>([]);
+  const [loadingAddStockGudang, setLoadingAddStockGudang] = useState(false);
 
-const menuItems = [
+  const menuItems = [
     { label: "Beranda", icon: Home, path: "/dashboard", active: true },
     { label: "Produk", icon: Package, path: "/produk", active: false },
     { label: "Kategori", icon: Tags, path: "/kategori", active: false },
     { label: "Warehouse", icon: WarehouseIcon, path: "/warehouse", active: false },
     { label: "Merchant", icon: Store, path: "/merchant", active: false },
     { label: "Transaksi", icon: Receipt, path: "/transaksi", active: false },
-];
+  ];
 
   const accountItems = [
     { label: "Roles", icon: ShieldCheck, path: "/role" },
@@ -196,6 +209,19 @@ const menuItems = [
     } catch {
       // opsional
     }
+  };
+
+  const fetchStokGudangList = async (gudangId: string): Promise<GudangStokOption[]> => {
+    if (!gudangId) return [];
+    try {
+      const res = await fetch(`${API_URL}/stok-gudang?gudang_id=${gudangId}`, {
+        headers: authHeaders(),
+      });
+      if (res.ok) return await res.json();
+    } catch {
+      // biarin, return array kosong di bawah
+    }
+    return [];
   };
 
   // ✅ Fetch pengguna untuk dropdown keeper
@@ -381,42 +407,71 @@ const menuItems = [
 
   /* ---------- Assign product ---------- */
   const openAssignModal = () => {
-    setAssignProdukId("");
-    setAssignStok("");
     setAssignGudangId("");
+    setGudangStokList([]);
+    setAssignProdukId("");
+    setAssignJumlah("");
     setAssignError(null);
     setIsAssignOpen(true);
   };
 
   const closeAssignModal = () => setIsAssignOpen(false);
 
+  const handleAssignGudangChange = async (gudangId: string) => {
+    setAssignGudangId(gudangId);
+    setAssignProdukId("");
+    setAssignJumlah("");
+    setLoadingGudangStok(true);
+    const list = await fetchStokGudangList(gudangId);
+    setGudangStokList(list);
+    setLoadingGudangStok(false);
+  };
+
   const assignedProdukIds = new Set(stokList.map((s) => s.produk_id));
-  const availableProduk = produkList.filter((p) => !assignedProdukIds.has(p.id));
-  const selectedAssignProduk =
-    produkList.find((p) => p.id === Number(assignProdukId)) ?? null;
+  const availableGudangStok = gudangStokList.filter(
+    (s) => !assignedProdukIds.has(s.produk_id) && s.stok > 0
+  );
+  const selectedGudangStok =
+    gudangStokList.find((s) => s.produk_id === Number(assignProdukId)) ?? null;
 
   const submitAssignProduct = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    if (selectedTokoId === null || !selectedAssignProduk) return;
+    if (selectedTokoId === null || !selectedGudangStok) return;
+
+    const jumlah = Number(assignJumlah);
+    if (!jumlah || jumlah < 1) {
+      setAssignError("Jumlah harus diisi minimal 1.");
+      return;
+    }
+    if (jumlah > selectedGudangStok.stok) {
+      setAssignError(`Jumlah melebihi stok gudang (tersedia ${selectedGudangStok.stok}).`);
+      return;
+    }
+
     setSubmittingAssign(true);
     setAssignError(null);
 
     try {
-      const res = await fetch(`${API_URL}/stok-toko`, {
+      const res = await fetch(`${API_URL}/stok-toko/transfer`, {
         method: "POST",
         headers: { "Content-Type": "application/json", ...authHeaders() },
         body: JSON.stringify({
-          produk_id: selectedAssignProduk.id,
           toko_id: selectedTokoId,
-          stok: Number(assignStok) || 0,
-          gudang_id: assignGudangId ? Number(assignGudangId) : null,
+          produk_id: selectedGudangStok.produk_id,
+          gudang_id: Number(assignGudangId),
+          jumlah,
         }),
       });
 
       const data = await res.json();
 
       if (!res.ok) {
-        setAssignError(data.message || "Gagal assign produk");
+        if (data.errors) {
+          const firstError = Object.values(data.errors)[0];
+          setAssignError(Array.isArray(firstError) ? firstError[0] as string : data.message);
+        } else {
+          setAssignError(data.message || "Gagal assign produk");
+        }
         return;
       }
 
@@ -435,15 +490,32 @@ const menuItems = [
   const closeProductDetail = () => setDetailProduct(null);
 
   /* ---------- Add stock ---------- */
-  const openAddStock = (item: StokTokoData) => {
+   const openAddStock = (item: StokTokoData) => {
     setStockTarget(item);
     setStockQty(1);
+    setAddStockGudangId("");
+    setAddStockGudangStokList([]);
   };
 
   const closeAddStock = () => {
     setStockTarget(null);
     setStockQty(1);
+    setAddStockGudangId("");
+    setAddStockGudangStokList([]);
   };
+
+  const handleAddStockGudangChange = async (gudangId: string) => {
+    setAddStockGudangId(gudangId);
+    setStockQty(1);
+    setLoadingAddStockGudang(true);
+    const list = await fetchStokGudangList(gudangId);
+    setAddStockGudangStokList(list);
+    setLoadingAddStockGudang(false);
+  };
+
+  const currentGudangStokForTarget = stockTarget
+    ? addStockGudangStokList.find((s) => s.produk_id === stockTarget.produk_id) ?? null
+    : null;
 
   const confirmAddStock = async () => {
     if (selectedTokoId === null || !stockTarget || stockQty <= 0) {
@@ -451,12 +523,32 @@ const menuItems = [
       return;
     }
 
+    if (!addStockGudangId) {
+      alert("Pilih gudang sumber dulu.");
+      return;
+    }
+
+    if (!currentGudangStokForTarget) {
+      alert("Produk ini tidak tersedia di gudang yang dipilih.");
+      return;
+    }
+
+    if (stockQty > currentGudangStokForTarget.stok) {
+      alert(`Jumlah melebihi stok gudang (tersedia ${currentGudangStokForTarget.stok}).`);
+      return;
+    }
+
     setSubmittingStock(true);
     try {
-      const res = await fetch(`${API_URL}/stok-toko/${stockTarget.id}`, {
-        method: "PUT",
+      const res = await fetch(`${API_URL}/stok-toko/transfer`, {
+        method: "POST",
         headers: { "Content-Type": "application/json", ...authHeaders() },
-        body: JSON.stringify({ tambah: stockQty }),
+        body: JSON.stringify({
+          toko_id: selectedTokoId,
+          produk_id: stockTarget.produk_id,
+          gudang_id: Number(addStockGudangId),
+          jumlah: stockQty,
+        }),
       });
 
       const data = await res.json();
@@ -511,11 +603,10 @@ const menuItems = [
               <li key={label}>
                 <button
                   onClick={() => navigate(path)}
-                  className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition ${
-                    active
-                      ? "bg-blue-50 text-blue-700"
-                      : "text-slate-500 hover:bg-slate-50 hover:text-slate-700"
-                  }`}
+                  className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition ${active
+                    ? "bg-blue-50 text-blue-700"
+                    : "text-slate-500 hover:bg-slate-50 hover:text-slate-700"
+                    }`}
                 >
                   <Icon className="w-[18px] h-[18px]" />
                   {label}
@@ -991,8 +1082,8 @@ const menuItems = [
                         {submittingToko
                           ? "Menyimpan..."
                           : view === "edit"
-                          ? "Save Changes"
-                          : "Create Now"}
+                            ? "Save Changes"
+                            : "Create Now"}
                       </button>
                     </div>
                   </form>
@@ -1061,90 +1152,20 @@ const menuItems = [
                 <p className="text-xs text-rose-500">{assignError}</p>
               )}
 
-              {selectedAssignProduk && (
-                <div className="flex items-center gap-3 p-3 rounded-xl border border-blue-200 bg-blue-50">
-                  <div className="w-11 h-11 rounded-lg border border-slate-200 bg-white overflow-hidden flex items-center justify-center shrink-0">
-                    {selectedAssignProduk.thumbnail ? (
-                      <img
-                        src={selectedAssignProduk.thumbnail}
-                        alt={selectedAssignProduk.nama}
-                        className="w-full h-full object-cover"
-                      />
-                    ) : (
-                      <Smartphone className="w-5 h-5 text-slate-300" />
-                    )}
-                  </div>
-                  <div className="min-w-0">
-                    <p className="text-sm font-semibold text-slate-800 truncate">
-                      {selectedAssignProduk.nama}
-                    </p>
-                    <p className="text-xs text-blue-600 font-semibold">
-                      {formatRupiah(selectedAssignProduk.harga)} &middot;{" "}
-                      {selectedAssignProduk.kategori?.name ?? "-"}
-                    </p>
-                  </div>
-                </div>
-              )}
-
-              <div>
+                            <div>
                 <label className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2 block">
-                  Pilih Produk
-                </label>
-                <div className="relative">
-                  <select
-                    value={assignProdukId}
-                    onChange={(e) => setAssignProdukId(e.target.value)}
-                    required
-                    disabled={loadingProduk}
-                    className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl text-sm text-slate-700 appearance-none focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
-                  >
-                    <option value="" disabled>
-                      {loadingProduk ? "Memuat produk..." : "Pilih produk"}
-                    </option>
-                    {availableProduk.map((p) => (
-                      <option key={p.id} value={p.id}>
-                        {p.nama}
-                      </option>
-                    ))}
-                  </select>
-                  <div className="absolute inset-y-0 right-0 pr-4 flex items-center pointer-events-none">
-                    <ChevronDown className="w-4 h-4 text-slate-400" />
-                  </div>
-                </div>
-                {!loadingProduk && availableProduk.length === 0 && (
-                  <p className="text-xs text-rose-500 mt-2">
-                    Semua produk sudah di-assign ke merchant ini, atau belum ada
-                    produk terdaftar.
-                  </p>
-                )}
-              </div>
-
-              <div>
-                <label className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2 block">
-                  Stok Awal
-                </label>
-                <input
-                  type="number"
-                  min={0}
-                  value={assignStok}
-                  onChange={(e) => setAssignStok(e.target.value)}
-                  placeholder="0"
-                  required
-                  className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl text-sm text-slate-700 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
-                />
-              </div>
-
-              <div>
-                <label className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2 block">
-                  Asal Gudang (opsional)
+                  1. Pilih Gudang Sumber
                 </label>
                 <div className="relative">
                   <select
                     value={assignGudangId}
-                    onChange={(e) => setAssignGudangId(e.target.value)}
+                    onChange={(e) => handleAssignGudangChange(e.target.value)}
+                    required
                     className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl text-sm text-slate-700 appearance-none focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
                   >
-                    <option value="">Tidak dicatat</option>
+                    <option value="" disabled>
+                      Pilih gudang
+                    </option>
                     {gudangList.map((g) => (
                       <option key={g.id} value={g.id}>
                         {g.nama}
@@ -1155,10 +1176,90 @@ const menuItems = [
                     <ChevronDown className="w-4 h-4 text-slate-400" />
                   </div>
                 </div>
-                <p className="text-[11px] text-slate-400 mt-1.5">
-                  Ini cuma catatan asal barang, bukan pengurang stok gudang
-                  otomatis.
-                </p>
+              </div>
+
+              {selectedGudangStok && (
+                <div className="flex items-center gap-3 p-3 rounded-xl border border-blue-200 bg-blue-50">
+                  <div className="w-11 h-11 rounded-lg border border-slate-200 bg-white overflow-hidden flex items-center justify-center shrink-0">
+                    {selectedGudangStok.produk.thumbnail ? (
+                      <img
+                        src={selectedGudangStok.produk.thumbnail}
+                        alt={selectedGudangStok.produk.nama}
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <Smartphone className="w-5 h-5 text-slate-300" />
+                    )}
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-sm font-semibold text-slate-800 truncate">
+                      {selectedGudangStok.produk.nama}
+                    </p>
+                    <p className="text-xs text-blue-600 font-semibold">
+                      {formatRupiah(selectedGudangStok.produk.harga)} &middot; Stok
+                      gudang: {selectedGudangStok.stok}
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              <div>
+                <label className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2 block">
+                  2. Pilih Produk
+                </label>
+                <div className="relative">
+                  <select
+                    value={assignProdukId}
+                    onChange={(e) => setAssignProdukId(e.target.value)}
+                    required
+                    disabled={!assignGudangId || loadingGudangStok}
+                    className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl text-sm text-slate-700 appearance-none focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition disabled:opacity-50"
+                  >
+                    <option value="" disabled>
+                      {!assignGudangId
+                        ? "Pilih gudang dulu"
+                        : loadingGudangStok
+                        ? "Memuat produk..."
+                        : "Pilih produk"}
+                    </option>
+                    {availableGudangStok.map((s) => (
+                      <option key={s.produk_id} value={s.produk_id}>
+                        {s.produk.nama} — Stok: {s.stok}
+                      </option>
+                    ))}
+                  </select>
+                  <div className="absolute inset-y-0 right-0 pr-4 flex items-center pointer-events-none">
+                    <ChevronDown className="w-4 h-4 text-slate-400" />
+                  </div>
+                </div>
+                {assignGudangId && !loadingGudangStok && availableGudangStok.length === 0 && (
+                  <p className="text-xs text-rose-500 mt-2">
+                    Gudang ini tidak punya produk dengan stok tersedia, atau semua
+                    produknya sudah di-assign ke merchant ini.
+                  </p>
+                )}
+              </div>
+
+              <div>
+                <label className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2 block">
+                  3. Jumlah Transfer
+                </label>
+                <input
+                  type="number"
+                  min={1}
+                  max={selectedGudangStok?.stok ?? undefined}
+                  value={assignJumlah}
+                  onChange={(e) => setAssignJumlah(e.target.value)}
+                  placeholder="0"
+                  required
+                  disabled={!selectedGudangStok}
+                  className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl text-sm text-slate-700 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition disabled:opacity-50"
+                />
+                {selectedGudangStok && (
+                  <p className="text-[11px] text-slate-400 mt-1.5">
+                    Maksimal {selectedGudangStok.stok} unit (stok tersedia di gudang).
+                  </p>
+                )}
               </div>
             </div>
 
@@ -1173,12 +1274,15 @@ const menuItems = [
               </button>
               <button
                 type="submit"
-                disabled={!selectedAssignProduk || submittingAssign}
+                disabled={!selectedGudangStok || submittingAssign}
                 className="bg-blue-700 hover:bg-blue-800 disabled:bg-slate-300 disabled:cursor-not-allowed text-white font-semibold px-6 py-2.5 rounded-full text-sm transition shadow-sm"
               >
-                {submittingAssign ? "Menyimpan..." : "Assign Product"}
+                {submittingAssign ? "Menyimpan..." : "Transfer & Assign"}
               </button>
             </div>
+
+              
+                
           </form>
         </div>
       )}
@@ -1304,7 +1408,7 @@ const menuItems = [
                 <X className="w-4 h-4" />
               </button>
             </div>
-            <div className="px-6 py-5 space-y-4">
+                      <div className="px-6 py-5 space-y-4">
               <div className="bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 flex items-center justify-between">
                 <span className="text-xs font-medium text-slate-500">
                   Current Stock
@@ -1313,6 +1417,43 @@ const menuItems = [
                   {stockTarget.stok} units
                 </span>
               </div>
+
+              <div>
+                <label className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2 block">
+                  Gudang Sumber
+                </label>
+                <div className="relative">
+                  <select
+                    value={addStockGudangId}
+                    onChange={(e) => handleAddStockGudangChange(e.target.value)}
+                    required
+                    className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl text-sm text-slate-700 appearance-none focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
+                  >
+                    <option value="" disabled>
+                      Pilih gudang
+                    </option>
+                    {gudangList.map((g) => (
+                      <option key={g.id} value={g.id}>
+                        {g.nama}
+                      </option>
+                    ))}
+                  </select>
+                  <div className="absolute inset-y-0 right-0 pr-4 flex items-center pointer-events-none">
+                    <ChevronDown className="w-4 h-4 text-slate-400" />
+                  </div>
+                </div>
+                {addStockGudangId && !loadingAddStockGudang && !currentGudangStokForTarget && (
+                  <p className="text-xs text-rose-500 mt-2">
+                    Produk ini tidak tersedia di gudang tersebut.
+                  </p>
+                )}
+                {currentGudangStokForTarget && (
+                  <p className="text-[11px] text-slate-400 mt-1.5">
+                    Stok tersedia di gudang: {currentGudangStokForTarget.stok} unit.
+                  </p>
+                )}
+              </div>
+
               <div>
                 <label className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2 block">
                   Quantity to Add
@@ -1364,7 +1505,7 @@ const menuItems = [
               <button
                 type="button"
                 onClick={confirmAddStock}
-                disabled={submittingStock}
+                disabled={submittingStock || !currentGudangStokForTarget}
                 className="bg-blue-700 hover:bg-blue-800 text-white font-semibold px-6 py-2.5 rounded-full text-sm transition shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {submittingStock ? "Menyimpan..." : "Save Stock"}

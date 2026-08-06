@@ -3,8 +3,11 @@
 namespace App\Http\Controllers;
 
 use App\Models\StokToko;
+use App\Models\StokGudang;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 
 class StokTokoController extends Controller
 {
@@ -64,6 +67,70 @@ class StokTokoController extends Controller
         $stokToko->load('produk.kategori', 'gudang');
 
         return response()->json($stokToko);
+    }
+
+     public function transfer(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'toko_id' => 'required|exists:toko,id',
+            'produk_id' => 'required|exists:produk,id',
+            'gudang_id' => 'required|exists:gudang,id',
+            'jumlah' => 'required|integer|min:1',
+        ]);
+
+        try {
+            $stokToko = DB::transaction(function () use ($validated) {
+                // Lock baris stok_gudang biar gak race condition kalau
+                // 2 admin transfer produk yang sama dari gudang yang sama bareng.
+                $stokGudang = StokGudang::where('gudang_id', $validated['gudang_id'])
+                    ->where('produk_id', $validated['produk_id'])
+                    ->lockForUpdate()
+                    ->first();
+
+                if (!$stokGudang) {
+                    throw ValidationException::withMessages([
+                        'produk_id' => 'Produk ini tidak terdaftar di gudang yang dipilih.',
+                    ]);
+                }
+
+                if ($stokGudang->stok < $validated['jumlah']) {
+                    throw ValidationException::withMessages([
+                        'jumlah' => "Stok gudang tidak cukup. Sisa stok: {$stokGudang->stok}.",
+                    ]);
+                }
+
+                $stokGudang->decrement('stok', $validated['jumlah']);
+
+                $stokToko = StokToko::where('toko_id', $validated['toko_id'])
+                    ->where('produk_id', $validated['produk_id'])
+                    ->lockForUpdate()
+                    ->first();
+
+                if ($stokToko) {
+                    // Produk udah ada di toko ini -> tambah stoknya (kasus "Add Stock")
+                    $stokToko->stok += $validated['jumlah'];
+                    $stokToko->gudang_id = $validated['gudang_id']; // catat sumber terbaru
+                    $stokToko->save();
+                } else {
+                    // Produk baru di toko ini -> assign pertama kali
+                    $stokToko = StokToko::create([
+                        'toko_id' => $validated['toko_id'],
+                        'produk_id' => $validated['produk_id'],
+                        'stok' => $validated['jumlah'],
+                        'gudang_id' => $validated['gudang_id'],
+                    ]);
+                }
+
+                return $stokToko->load('produk.kategori', 'gudang');
+            });
+
+            return response()->json($stokToko, 201);
+        } catch (ValidationException $e) {
+            return response()->json([
+                'message' => $e->getMessage(),
+                'errors' => $e->errors(),
+            ], 422);
+        }
     }
 
     public function destroy(int $id): JsonResponse
