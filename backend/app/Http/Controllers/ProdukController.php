@@ -62,7 +62,22 @@ class ProdukController extends Controller
 
     public function destroy($id)
     {
-        Produk::findOrFail($id)->delete();
-        return response()->json(['message' => 'Produk berhasil dihapus']);
+        $produk = Produk::findOrFail($id);
+
+        try {
+            $produk->delete();
+            return response()->json(['message' => 'Produk berhasil dihapus']);
+        } catch (\Illuminate\Database\QueryException $e) {
+            // Kode 23000 = foreign key constraint violation
+            if ($e->getCode() === '23000') {
+                return response()->json([
+                    'message' => 'Produk tidak bisa dihapus karena masih memiliki data stok atau riwayat transaksi.',
+                ], 422);
+            }
+
+            return response()->json([
+                'message' => 'Gagal menghapus produk.',
+            ], 500);
+        }
     }
 }

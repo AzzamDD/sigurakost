@@ -23,6 +23,7 @@ import {
     FileText,
     CheckCircle2,
     Receipt,
+    Trash2,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
@@ -85,14 +86,14 @@ export default function ProductsPage() {
     // ✅ State search
     const [searchQuery, setSearchQuery] = useState("");
 
-const menuItems = [
-    { label: "Beranda", icon: Home, path: "/dashboard", active: false },
-    { label: "Produk", icon: Package, path: "/produk", active: true },
-    { label: "Kategori", icon: Tags, path: "/kategori", active: false },
-    { label: "Warehouse", icon: WarehouseIcon, path: "/warehouse", active: false },
-    { label: "Merchant", icon: Store, path: "/merchant", active: false },
-    { label: "Transaksi", icon: Receipt, path: "/transaksi", active: false },
-];
+    const menuItems = [
+        { label: "Beranda", icon: Home, path: "/dashboard", active: false },
+        { label: "Produk", icon: Package, path: "/produk", active: true },
+        { label: "Kategori", icon: Tags, path: "/kategori", active: false },
+        { label: "Warehouse", icon: WarehouseIcon, path: "/warehouse", active: false },
+        { label: "Merchant", icon: Store, path: "/merchant", active: false },
+        { label: "Transaksi", icon: Receipt, path: "/transaksi", active: false },
+    ];
 
     const accountItems = [
         { label: "Roles", icon: ShieldCheck, path: "/role" },
@@ -264,6 +265,39 @@ const menuItems = [
         }
     };
 
+    const handleDeleteProduct = async (product: ProdukData) => {
+        if (!confirm(`Hapus produk "${product.nama}"? Tindakan ini tidak bisa dibatalkan.`)) {
+            return;
+        }
+
+        try {
+            const token = localStorage.getItem("token");
+            const res = await fetch(`${API_URL}/produk/${product.id}`, {
+                method: "DELETE",
+                headers: {
+                    Authorization: `Bearer ${token}`,
+                    Accept: "application/json",
+                },
+            });
+
+            const data = await res.json();
+
+            if (!res.ok) {
+                alert(data.message || "Gagal menghapus produk");
+                return;
+            }
+
+            await fetchProducts();
+
+            // Kalau produk yang dihapus sedang dibuka di modal detail, tutup modalnya
+            if (selectedProduct?.id === product.id) {
+                setSelectedProduct(null);
+            }
+        } catch {
+            alert("Tidak dapat terhubung ke server");
+        }
+    };
+
     const displayedPhoto = previewUrl ?? newProduct.thumbnail;
 
     return (
@@ -290,11 +324,10 @@ const menuItems = [
                             <li key={label}>
                                 <button
                                     onClick={() => navigate(path)}
-                                    className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition ${
-                                        active
-                                            ? "bg-blue-50 text-blue-700"
-                                            : "text-slate-500 hover:bg-slate-50 hover:text-slate-700"
-                                    }`}
+                                    className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition ${active
+                                        ? "bg-blue-50 text-blue-700"
+                                        : "text-slate-500 hover:bg-slate-50 hover:text-slate-700"
+                                        }`}
                                 >
                                     <Icon className="w-[18px] h-[18px]" />
                                     {label}
@@ -464,13 +497,22 @@ const menuItems = [
                                                         {p.kategori?.name ?? "-"}
                                                     </td>
                                                     <td className="px-5 py-3">
-                                                        <button
-                                                            onClick={() => setSelectedProduct(p)}
-                                                            className="inline-flex items-center gap-1 bg-blue-700 hover:bg-blue-800 text-white text-xs font-medium px-3.5 py-1.5 rounded-full transition"
-                                                        >
-                                                            Detail
-                                                            <ChevronRight className="w-3.5 h-3.5" />
-                                                        </button>
+                                                        <div className="flex items-center gap-2">
+                                                            <button
+                                                                onClick={() => setSelectedProduct(p)}
+                                                                className="inline-flex items-center gap-1 bg-blue-700 hover:bg-blue-800 text-white text-xs font-medium px-3.5 py-1.5 rounded-full transition"
+                                                            >
+                                                                Detail
+                                                                <ChevronRight className="w-3.5 h-3.5" />
+                                                            </button>
+                                                            <button
+                                                                onClick={() => handleDeleteProduct(p)}
+                                                                className="inline-flex items-center gap-1 bg-rose-50 hover:bg-rose-100 text-rose-600 text-xs font-medium px-3 py-1.5 rounded-full transition"
+                                                            >
+                                                                <Trash2 className="w-3.5 h-3.5" />
+                                                                Hapus
+                                                            </button>
+                                                        </div>
                                                     </td>
                                                 </tr>
                                             ))
@@ -544,16 +586,14 @@ const menuItems = [
                                                         is_popular: !prev.is_popular,
                                                     }))
                                                 }
-                                                className={`relative w-11 h-6 rounded-full transition ${
-                                                    newProduct.is_popular ? "bg-blue-600" : "bg-slate-300"
-                                                }`}
+                                                className={`relative w-11 h-6 rounded-full transition ${newProduct.is_popular ? "bg-blue-600" : "bg-slate-300"
+                                                    }`}
                                             >
                                                 <span
-                                                    className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${
-                                                        newProduct.is_popular
-                                                            ? "translate-x-5"
-                                                            : "translate-x-0"
-                                                    }`}
+                                                    className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${newProduct.is_popular
+                                                        ? "translate-x-5"
+                                                        : "translate-x-0"
+                                                        }`}
                                                 />
                                             </button>
                                         </label>
@@ -693,6 +733,15 @@ const menuItems = [
 
                         <div className="rounded-2xl border border-slate-200 p-4 flex items-start justify-between gap-4">
                             <div className="min-w-0">
+                                <div className="flex justify-end mt-4">
+                                    <button
+                                        onClick={() => handleDeleteProduct(selectedProduct)}
+                                        className="inline-flex items-center gap-1.5 bg-rose-50 hover:bg-rose-100 text-rose-600 text-sm font-semibold px-4 py-2 rounded-full transition"
+                                    >
+                                        <Trash2 className="w-4 h-4" />
+                                        Hapus Produk
+                                    </button>
+                                </div>
                                 <div className="flex items-center gap-2 mb-3">
                                     <span className="text-base font-bold text-slate-800 truncate">
                                         {selectedProduct.nama}
