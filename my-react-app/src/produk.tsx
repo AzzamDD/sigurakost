@@ -86,8 +86,8 @@ export default function ProductsPage() {
     const [searchQuery, setSearchQuery] = useState("");
 
 const menuItems = [
-    { label: "Beranda", icon: Home, path: "/dashboard", active: true },
-    { label: "Produk", icon: Package, path: "/produk", active: false },
+    { label: "Beranda", icon: Home, path: "/dashboard", active: false },
+    { label: "Produk", icon: Package, path: "/produk", active: true },
     { label: "Kategori", icon: Tags, path: "/kategori", active: false },
     { label: "Warehouse", icon: WarehouseIcon, path: "/warehouse", active: false },
     { label: "Merchant", icon: Store, path: "/merchant", active: false },

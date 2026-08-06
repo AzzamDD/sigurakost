@@ -9,7 +9,7 @@ import {
     Store,
     ShieldCheck,
     Users,
-    Settings,
+    Settings as SettingsIcon,
     Search,
     ChevronRight,
     ChevronLeft,
@@ -28,7 +28,6 @@ const API_URL = (import.meta.env.VITE_API_URL || "http://localhost:8000") + "/ap
 type TokoRef = { id: number; nama: string };
 type PenggunaRef = { id: number; nama: string };
 type ProdukRef = { id: number; nama: string; harga: number };
-
 
 type DetailTransaksiItem = {
     id: number;
@@ -92,7 +91,7 @@ export default function TransactionPage() {
     const [namaPelanggan, setNamaPelanggan] = useState("");
     const [noHp, setNoHp] = useState("");
     const [pajak, setPajak] = useState("0");
-    const [adminTokoId, setAdminTokoId] = useState(""); // toko_id kalau admin bikin transaksi
+    const [adminTokoId, setAdminTokoId] = useState("");
 
     const [submitting, setSubmitting] = useState(false);
     const [searchQuery, setSearchQuery] = useState("");
@@ -109,7 +108,7 @@ export default function TransactionPage() {
     const accountItems = [
         { label: "Roles", icon: ShieldCheck, path: "/role" },
         { label: "Manajemen User", icon: Users, path: "/manageUser" },
-        { label: "Settings", icon: Settings, path: "/settings" },
+        { label: "Settings", icon: SettingsIcon, path: "/settings" },
     ];
 
     const authHeaders = () => {
@@ -147,9 +146,10 @@ export default function TransactionPage() {
     };
 
     useEffect(() => {
-        if (userLoading || !role) return; // tunggu role kebaca dulu, jangan tembak API buta
+        if (userLoading || !role) return;
         fetchTransaksi();
-        if (isAdmin) fetchToko();
+        // Fetch toko untuk semua role (dibutuhkan saat buat transaksi juga)
+        fetchToko();
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [userLoading, role, filterTokoId]);
 
@@ -173,7 +173,10 @@ export default function TransactionPage() {
                     c.produk_id === produk.id ? { ...c, jumlah: c.jumlah + jumlah } : c
                 );
             }
-            return [...prev, { produk_id: produk.id, nama: produk.nama, harga: produk.harga, jumlah }];
+            return [
+                ...prev,
+                { produk_id: produk.id, nama: produk.nama, harga: produk.harga, jumlah },
+            ];
         });
 
         setSelectedProdukId("");
@@ -184,7 +187,9 @@ export default function TransactionPage() {
         setCart((prev) =>
             prev
                 .map((c) =>
-                    c.produk_id === produkId ? { ...c, jumlah: Math.max(1, c.jumlah + delta) } : c
+                    c.produk_id === produkId
+                        ? { ...c, jumlah: Math.max(1, c.jumlah + delta) }
+                        : c
                 )
                 .filter((c) => c.jumlah > 0)
         );
@@ -298,7 +303,7 @@ export default function TransactionPage() {
         );
     });
 
-    // Jangan render apapun yang butuh role sebelum role kebaca — cegah flash UI salah
+    /* ---------- Loading / No Role Guard ---------- */
     if (userLoading) {
         return (
             <div className="min-h-screen flex items-center justify-center text-slate-400">
@@ -316,16 +321,28 @@ export default function TransactionPage() {
     }
 
     return (
-        <div className="min-h-screen w-full bg-slate-100 flex">
-            {/* Sidebar */}
-            <aside className="w-60 shrink-0 bg-white border-r border-slate-200 flex flex-col">
+        <div className="min-h-screen w-full bg-slate-100 flex font-sans">
+            {/* ===== SIDEBAR ===== */}
+            <aside className="w-60 shrink-0 bg-white border-r border-slate-200 flex-col hidden md:flex">
                 <div className="flex items-center gap-2 px-6 py-6">
-                    <img src="/assets/sigurakost.png" alt="logo" className="w-6 h-6 object-contain" />
-                    <span className="text-lg font-extrabold text-blue-700 tracking-tight">SiguraKost</span>
+                    <img
+                        src="/assets/sigurakost.png"
+                        alt="SiguraKost logo"
+                        className="w-6 h-6 object-contain bg-slate-200 rounded-sm"
+                        onError={(e) => {
+                            e.currentTarget.style.display = "none";
+                        }}
+                    />
+                    <span className="text-lg font-extrabold text-blue-700 tracking-tight">
+                        SiguraKost
+                    </span>
                 </div>
 
                 <nav className="flex-1 px-4 overflow-y-auto">
-                    <p className="px-2 text-[11px] font-semibold text-slate-400 uppercase tracking-wide mb-2">Menu</p>
+                    {/* Menu Utama */}
+                    <p className="px-2 text-[11px] font-semibold text-slate-400 uppercase tracking-wide mb-2">
+                        Menu
+                    </p>
                     <ul className="space-y-1 mb-6">
                         {menuItems.map(({ label, icon: Icon, path, active }) => (
                             <li key={label}>
@@ -344,32 +361,30 @@ export default function TransactionPage() {
                         ))}
                     </ul>
 
-                    {isAdmin && (
-                        <>
-                            <p className="px-2 text-[11px] font-semibold text-slate-400 uppercase tracking-wide mb-2">
-                                Account Settings
-                            </p>
-                            <ul className="space-y-1">
-                                {accountItems.map(({ label, icon: Icon, path }) => (
-                                    <li key={label}>
-                                        <button
-                                            onClick={() => navigate(path)}
-                                            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-slate-500 hover:bg-slate-50 hover:text-slate-700 transition"
-                                        >
-                                            <Icon className="w-[18px] h-[18px]" />
-                                            {label}
-                                        </button>
-                                    </li>
-                                ))}
-                            </ul>
-                        </>
-                    )}
+                    {/* Account Settings — selalu tampil, konsisten dengan halaman lain */}
+                    <p className="px-2 text-[11px] font-semibold text-slate-400 uppercase tracking-wide mb-2">
+                        Account Settings
+                    </p>
+                    <ul className="space-y-1">
+                        {accountItems.map(({ label, icon: Icon, path }) => (
+                            <li key={label}>
+                                <button
+                                    onClick={() => navigate(path)}
+                                    className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-slate-500 hover:bg-slate-50 hover:text-slate-700 transition"
+                                >
+                                    <Icon className="w-[18px] h-[18px]" />
+                                    {label}
+                                </button>
+                            </li>
+                        ))}
+                    </ul>
                 </nav>
             </aside>
 
-            {/* Main */}
+            {/* ===== MAIN ===== */}
             <div className="flex-1 flex flex-col min-w-0">
-                <header className="flex items-center justify-between gap-4 px-8 py-5">
+                {/* Header */}
+                <header className="flex items-center justify-between gap-4 px-8 py-5 bg-slate-100/50 backdrop-blur-sm sticky top-0 z-10 border-b border-slate-200/50">
                     <div>
                         <h1 className="text-lg font-semibold text-slate-800">
                             {view === "list" ? "Transaksi" : "Buat Transaksi Baru"}
@@ -405,120 +420,155 @@ export default function TransactionPage() {
                                 className="w-9 h-9 rounded-full object-cover bg-slate-200"
                             />
                             <div className="hidden md:block leading-tight">
-                                <p className="text-sm font-semibold text-slate-800">{user?.nama}</p>
+                                <p className="text-sm font-semibold text-slate-800">
+                                    {user?.nama || "Loading..."}
+                                </p>
                                 <p className="text-xs text-slate-400 capitalize">{role}</p>
                             </div>
+                            <ChevronRight className="w-4 h-4 text-slate-400" />
                         </div>
                     </div>
                 </header>
 
-                <main className="flex-1 px-8 pb-8 overflow-y-auto">
-                    {view === "list" ? (
-                        <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
-                            <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100 gap-3 flex-wrap">
-                                <p className="text-base font-semibold text-slate-800">
-                                    <span className="text-blue-700">{filteredTransaksi.length}</span> Total Transaksi
-                                </p>
+                {/* Content */}
+                <main className="flex-1 px-8 pb-8 pt-4 overflow-y-auto">
+                    {/* ===== LIST VIEW ===== */}
+                    {view === "list" && (
+                        <div className="max-w-6xl mx-auto">
+                            <div className="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-sm">
+                                <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100 gap-3 flex-wrap">
+                                    <p className="text-base font-semibold text-slate-800">
+                                        <span className="text-blue-700">{filteredTransaksi.length}</span>{" "}
+                                        Total Transaksi
+                                    </p>
 
-                                <div className="flex items-center gap-3">
-                                    {isAdmin && (
-                                        <div className="relative">
-                                            <select
-                                                value={filterTokoId}
-                                                onChange={(e) => setFilterTokoId(e.target.value)}
-                                                className="appearance-none rounded-full border border-slate-200 bg-white pl-4 pr-9 py-2 text-sm text-slate-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                            >
-                                                <option value="">Semua Toko</option>
-                                                {tokoList.map((t) => (
-                                                    <option key={t.id} value={t.id}>
-                                                        {t.nama}
-                                                    </option>
-                                                ))}
-                                            </select>
-                                            <ChevronDown className="w-4 h-4 text-slate-400 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
-                                        </div>
-                                    )}
+                                    <div className="flex items-center gap-3">
+                                        {/* Filter toko hanya untuk admin */}
+                                        {isAdmin && (
+                                            <div className="relative">
+                                                <select
+                                                    value={filterTokoId}
+                                                    onChange={(e) => setFilterTokoId(e.target.value)}
+                                                    className="appearance-none rounded-full border border-slate-200 bg-white pl-4 pr-9 py-2 text-sm text-slate-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                                >
+                                                    <option value="">Semua Toko</option>
+                                                    {tokoList.map((t) => (
+                                                        <option key={t.id} value={t.id}>
+                                                            {t.nama}
+                                                        </option>
+                                                    ))}
+                                                </select>
+                                                <ChevronDown className="w-4 h-4 text-slate-400 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                                            </div>
+                                        )}
 
-                                    <button
-                                        onClick={openAddPage}
-                                        className="inline-flex items-center gap-1.5 bg-blue-700 hover:bg-blue-800 text-white text-sm font-medium px-4 py-2 rounded-full transition"
-                                    >
-                                        Buat Transaksi
-                                        <Plus className="w-4 h-4" />
-                                    </button>
+                                        <button
+                                            onClick={openAddPage}
+                                            className="inline-flex items-center gap-1.5 bg-blue-700 hover:bg-blue-800 text-white text-sm font-medium px-4 py-2 rounded-full transition"
+                                        >
+                                            Buat Transaksi
+                                            <Plus className="w-4 h-4" />
+                                        </button>
+                                    </div>
                                 </div>
-                            </div>
 
-                            <div className="overflow-x-auto">
-                                <table className="w-full text-sm">
-                                    <thead>
-                                        <tr className="text-left text-xs text-slate-400 uppercase tracking-wide bg-slate-50">
-                                            <th className="px-5 py-3 font-medium">ID</th>
-                                            <th className="px-5 py-3 font-medium">Pelanggan</th>
-                                            {isAdmin && <th className="px-5 py-3 font-medium">Toko</th>}
-                                            <th className="px-5 py-3 font-medium">Kasir</th>
-                                            <th className="px-5 py-3 font-medium">Total</th>
-                                            <th className="px-5 py-3 font-medium">Aksi</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {loadingList ? (
-                                            <tr>
-                                                <td colSpan={6} className="px-5 py-10 text-center text-slate-400">
-                                                    Memuat...
-                                                </td>
+                                <div className="overflow-x-auto">
+                                    <table className="w-full text-sm">
+                                        <thead>
+                                            <tr className="text-left text-xs text-slate-400 uppercase tracking-wide bg-slate-50">
+                                                <th className="px-5 py-3 font-medium">ID</th>
+                                                <th className="px-5 py-3 font-medium">Pelanggan</th>
+                                                <th className="px-5 py-3 font-medium">Toko</th>
+                                                <th className="px-5 py-3 font-medium">Kasir</th>
+                                                <th className="px-5 py-3 font-medium">Total</th>
+                                                <th className="px-5 py-3 font-medium">Aksi</th>
                                             </tr>
-                                        ) : filteredTransaksi.length === 0 ? (
-                                            <tr>
-                                                <td colSpan={6} className="px-5 py-10 text-center text-slate-400">
-                                                    Belum ada transaksi
-                                                </td>
-                                            </tr>
-                                        ) : (
-                                            filteredTransaksi.map((t) => (
-                                                <tr key={t.id} className="border-t border-slate-100 hover:bg-slate-50 transition">
-                                                    <td className="px-5 py-3 font-medium text-slate-700">#{t.id}</td>
-                                                    <td className="px-5 py-3 text-slate-600">{t.nama_pelanggan || "-"}</td>
-                                                    {isAdmin && (
-                                                        <td className="px-5 py-3 text-slate-500">{t.toko?.nama ?? "-"}</td>
-                                                    )}
-                                                    <td className="px-5 py-3 text-slate-500">{t.pengguna?.nama ?? "-"}</td>
-                                                    <td className="px-5 py-3 font-semibold text-slate-700">
-                                                        Rp {Number(t.total_bayar).toLocaleString("id-ID")}
-                                                    </td>
-                                                    <td className="px-5 py-3">
-                                                        <div className="flex items-center gap-2">
-                                                            <button
-                                                                onClick={() => setSelectedTransaksi(t)}
-                                                                className="inline-flex items-center gap-1 bg-blue-700 hover:bg-blue-800 text-white text-xs font-medium px-3.5 py-1.5 rounded-full transition"
-                                                            >
-                                                                Detail
-                                                                <ChevronRight className="w-3.5 h-3.5" />
-                                                            </button>
-                                                            {isAdmin && (
-                                                                <button
-                                                                    onClick={() => handleVoid(t)}
-                                                                    className="inline-flex items-center gap-1 bg-rose-50 hover:bg-rose-100 text-rose-600 text-xs font-medium px-3 py-1.5 rounded-full transition"
-                                                                >
-                                                                    <Trash2 className="w-3.5 h-3.5" />
-                                                                    Void
-                                                                </button>
-                                                            )}
-                                                        </div>
+                                        </thead>
+                                        <tbody>
+                                            {loadingList ? (
+                                                <tr>
+                                                    <td
+                                                        colSpan={6}
+                                                        className="px-5 py-10 text-center text-slate-400"
+                                                    >
+                                                        Memuat...
                                                     </td>
                                                 </tr>
-                                            ))
-                                        )}
-                                    </tbody>
-                                </table>
+                                            ) : filteredTransaksi.length === 0 ? (
+                                                <tr>
+                                                    <td
+                                                        colSpan={6}
+                                                        className="px-5 py-10 text-center text-slate-400"
+                                                    >
+                                                        Belum ada transaksi
+                                                    </td>
+                                                </tr>
+                                            ) : (
+                                                filteredTransaksi.map((t) => (
+                                                    <tr
+                                                        key={t.id}
+                                                        className="border-t border-slate-100 hover:bg-slate-50 transition"
+                                                    >
+                                                        <td className="px-5 py-3 font-medium text-slate-700">
+                                                            #{t.id}
+                                                        </td>
+                                                        <td className="px-5 py-3 text-slate-600">
+                                                            {t.nama_pelanggan || "-"}
+                                                        </td>
+                                                        <td className="px-5 py-3 text-slate-500">
+                                                            {t.toko?.nama ?? "-"}
+                                                        </td>
+                                                        <td className="px-5 py-3 text-slate-500">
+                                                            {t.pengguna?.nama ?? "-"}
+                                                        </td>
+                                                        <td className="px-5 py-3 font-semibold text-slate-700">
+                                                            Rp{" "}
+                                                            {Number(t.total_bayar).toLocaleString("id-ID")}
+                                                        </td>
+                                                        <td className="px-5 py-3">
+                                                            <div className="flex items-center gap-2">
+                                                                <button
+                                                                    onClick={() => setSelectedTransaksi(t)}
+                                                                    className="inline-flex items-center gap-1 bg-blue-700 hover:bg-blue-800 text-white text-xs font-medium px-3.5 py-1.5 rounded-full transition"
+                                                                >
+                                                                    Detail
+                                                                    <ChevronRight className="w-3.5 h-3.5" />
+                                                                </button>
+                                                                {/* Void hanya untuk admin */}
+                                                                {isAdmin && (
+                                                                    <button
+                                                                        onClick={() => handleVoid(t)}
+                                                                        className="inline-flex items-center gap-1 bg-rose-50 hover:bg-rose-100 text-rose-600 text-xs font-medium px-3 py-1.5 rounded-full transition"
+                                                                    >
+                                                                        <Trash2 className="w-3.5 h-3.5" />
+                                                                        Void
+                                                                    </button>
+                                                                )}
+                                                            </div>
+                                                        </td>
+                                                    </tr>
+                                                ))
+                                            )}
+                                        </tbody>
+                                    </table>
+                                </div>
                             </div>
                         </div>
-                    ) : (
-                        <form onSubmit={handleSubmit} className="max-w-5xl grid grid-cols-1 lg:grid-cols-3 gap-5">
-                            {/* Kiri: pilih produk + info pelanggan */}
+                    )}
+
+                    {/* ===== ADD VIEW ===== */}
+                    {view === "add" && (
+                        <form
+                            onSubmit={handleSubmit}
+                            className="max-w-5xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-5"
+                        >
+                            {/* Kiri: info pelanggan + produk */}
                             <div className="lg:col-span-2 space-y-4">
-                                <div className="bg-white rounded-2xl border border-slate-200 p-5">
-                                    <p className="text-sm font-semibold text-slate-800 mb-4">Info Pelanggan</p>
+                                {/* Info Pelanggan */}
+                                <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm">
+                                    <p className="text-sm font-semibold text-slate-800 mb-4">
+                                        Info Pelanggan
+                                    </p>
                                     <div className="grid grid-cols-2 gap-3">
                                         <input
                                             type="text"
@@ -536,45 +586,60 @@ export default function TransactionPage() {
                                         />
                                     </div>
 
+                                    {/* Pilih toko hanya untuk admin */}
                                     {isAdmin && (
                                         <div className="mt-3">
-                                            <label className="text-xs text-slate-400 mb-1 block">Toko</label>
-                                            <select
-                                                value={adminTokoId}
-                                                onChange={(e) => setAdminTokoId(e.target.value)}
-                                                required
-                                                className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                            >
-                                                <option value="" disabled>
-                                                    Pilih toko
-                                                </option>
-                                                {tokoList.map((t) => (
-                                                    <option key={t.id} value={t.id}>
-                                                        {t.nama}
+                                            <label className="text-xs text-slate-400 mb-1 block">
+                                                Toko
+                                            </label>
+                                            <div className="relative">
+                                                <select
+                                                    value={adminTokoId}
+                                                    onChange={(e) => setAdminTokoId(e.target.value)}
+                                                    required
+                                                    className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm appearance-none focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                                >
+                                                    <option value="" disabled>
+                                                        Pilih toko
                                                     </option>
-                                                ))}
-                                            </select>
+                                                    {tokoList.map((t) => (
+                                                        <option key={t.id} value={t.id}>
+                                                            {t.nama}
+                                                        </option>
+                                                    ))}
+                                                </select>
+                                                <div className="absolute inset-y-0 right-0 pr-4 flex items-center pointer-events-none">
+                                                    <ChevronDown className="w-4 h-4 text-slate-400" />
+                                                </div>
+                                            </div>
                                         </div>
                                     )}
                                 </div>
 
-                                <div className="bg-white rounded-2xl border border-slate-200 p-5">
+                                {/* Tambah Produk */}
+                                <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm">
                                     <p className="text-sm font-semibold text-slate-800 mb-4 flex items-center gap-2">
                                         <ShoppingCart className="w-4 h-4" /> Tambah Produk
                                     </p>
                                     <div className="flex gap-2">
-                                        <select
-                                            value={selectedProdukId}
-                                            onChange={(e) => setSelectedProdukId(e.target.value)}
-                                            className="flex-1 rounded-xl border border-slate-200 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                        >
-                                            <option value="">Pilih produk</option>
-                                            {produkList.map((p) => (
-                                                <option key={p.id} value={p.id}>
-                                                    {p.nama} — Rp {Number(p.harga).toLocaleString("id-ID")}
-                                                </option>
-                                            ))}
-                                        </select>
+                                        <div className="relative flex-1">
+                                            <select
+                                                value={selectedProdukId}
+                                                onChange={(e) => setSelectedProdukId(e.target.value)}
+                                                className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm appearance-none focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                            >
+                                                <option value="">Pilih produk</option>
+                                                {produkList.map((p) => (
+                                                    <option key={p.id} value={p.id}>
+                                                        {p.nama} — Rp{" "}
+                                                        {Number(p.harga).toLocaleString("id-ID")}
+                                                    </option>
+                                                ))}
+                                            </select>
+                                            <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+                                                <ChevronDown className="w-4 h-4 text-slate-400" />
+                                            </div>
+                                        </div>
                                         <input
                                             type="number"
                                             min={1}
@@ -591,9 +656,12 @@ export default function TransactionPage() {
                                         </button>
                                     </div>
 
+                                    {/* Cart Items */}
                                     <div className="mt-4 space-y-2">
                                         {cart.length === 0 ? (
-                                            <p className="text-xs text-slate-400 text-center py-6">Keranjang kosong</p>
+                                            <p className="text-xs text-slate-400 text-center py-6">
+                                                Keranjang kosong
+                                            </p>
                                         ) : (
                                             cart.map((c) => (
                                                 <div
@@ -601,7 +669,9 @@ export default function TransactionPage() {
                                                     className="flex items-center justify-between gap-3 border border-slate-100 rounded-xl px-4 py-2.5"
                                                 >
                                                     <div className="min-w-0">
-                                                        <p className="text-sm font-medium text-slate-700 truncate">{c.nama}</p>
+                                                        <p className="text-sm font-medium text-slate-700 truncate">
+                                                            {c.nama}
+                                                        </p>
                                                         <p className="text-xs text-slate-400">
                                                             Rp {c.harga.toLocaleString("id-ID")} / item
                                                         </p>
@@ -609,23 +679,29 @@ export default function TransactionPage() {
                                                     <div className="flex items-center gap-2 shrink-0">
                                                         <button
                                                             type="button"
-                                                            onClick={() => updateCartJumlah(c.produk_id, -1)}
-                                                            className="w-7 h-7 rounded-full bg-slate-100 flex items-center justify-center hover:bg-slate-200"
+                                                            onClick={() =>
+                                                                updateCartJumlah(c.produk_id, -1)
+                                                            }
+                                                            className="w-7 h-7 rounded-full bg-slate-100 flex items-center justify-center hover:bg-slate-200 transition"
                                                         >
                                                             <Minus className="w-3.5 h-3.5" />
                                                         </button>
-                                                        <span className="text-sm w-6 text-center">{c.jumlah}</span>
+                                                        <span className="text-sm w-6 text-center font-medium">
+                                                            {c.jumlah}
+                                                        </span>
                                                         <button
                                                             type="button"
-                                                            onClick={() => updateCartJumlah(c.produk_id, 1)}
-                                                            className="w-7 h-7 rounded-full bg-slate-100 flex items-center justify-center hover:bg-slate-200"
+                                                            onClick={() =>
+                                                                updateCartJumlah(c.produk_id, 1)
+                                                            }
+                                                            className="w-7 h-7 rounded-full bg-slate-100 flex items-center justify-center hover:bg-slate-200 transition"
                                                         >
                                                             <Plus className="w-3.5 h-3.5" />
                                                         </button>
                                                         <button
                                                             type="button"
                                                             onClick={() => removeFromCart(c.produk_id)}
-                                                            className="text-rose-500 hover:text-rose-700 ml-1"
+                                                            className="text-rose-500 hover:text-rose-700 ml-1 transition"
                                                         >
                                                             <Trash2 className="w-4 h-4" />
                                                         </button>
@@ -637,11 +713,13 @@ export default function TransactionPage() {
                                 </div>
                             </div>
 
-                            {/* Kanan: ringkasan */}
-                            <div className="bg-white rounded-2xl border border-slate-200 p-5 h-fit space-y-4">
+                            {/* Kanan: Ringkasan */}
+                            <div className="bg-white rounded-2xl border border-slate-200 p-5 h-fit space-y-4 shadow-sm">
                                 <p className="text-sm font-semibold text-slate-800">Ringkasan</p>
                                 <div>
-                                    <label className="text-xs text-slate-400 mb-1 block">Pajak (nominal, opsional)</label>
+                                    <label className="text-xs text-slate-400 mb-1 block">
+                                        Pajak (nominal, opsional)
+                                    </label>
                                     <input
                                         type="number"
                                         min={0}
@@ -658,7 +736,9 @@ export default function TransactionPage() {
                                     </div>
                                     <div className="flex justify-between text-slate-500">
                                         <span>Pajak</span>
-                                        <span>Rp {(Number(pajak) || 0).toLocaleString("id-ID")}</span>
+                                        <span>
+                                            Rp {(Number(pajak) || 0).toLocaleString("id-ID")}
+                                        </span>
                                     </div>
                                     <div className="flex justify-between font-bold text-slate-800 text-base pt-1">
                                         <span>Total</span>
@@ -669,9 +749,18 @@ export default function TransactionPage() {
                                 <button
                                     type="submit"
                                     disabled={submitting}
-                                    className="w-full bg-blue-700 hover:bg-blue-800 text-white font-semibold py-3 rounded-full transition disabled:opacity-50"
+                                    className="w-full bg-blue-700 hover:bg-blue-800 text-white font-semibold py-3 rounded-full transition disabled:opacity-50 disabled:cursor-not-allowed"
                                 >
                                     {submitting ? "Menyimpan..." : "Simpan Transaksi"}
+                                </button>
+
+                                <button
+                                    type="button"
+                                    onClick={closeAddPage}
+                                    disabled={submitting}
+                                    className="w-full bg-red-50 hover:bg-red-100 text-red-500 font-semibold py-3 rounded-full transition disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+                                >
+                                    Batal
                                 </button>
                             </div>
                         </form>
@@ -679,45 +768,55 @@ export default function TransactionPage() {
                 </main>
             </div>
 
-            {/* Modal Detail */}
+            {/* ===== MODAL DETAIL ===== */}
             {selectedTransaksi && (
                 <div
-                    className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4"
+                    className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4"
                     onClick={() => setSelectedTransaksi(null)}
                 >
                     <div
-                        className="w-full max-w-md bg-white rounded-2xl shadow-xl p-5"
+                        className="w-full max-w-md bg-white rounded-2xl shadow-xl"
                         onClick={(e) => e.stopPropagation()}
                     >
-                        <div className="flex items-center justify-between mb-4">
-                            <h2 className="text-lg font-bold text-slate-800">Transaksi #{selectedTransaksi.id}</h2>
+                        <div className="flex items-center justify-between px-6 py-5 border-b border-slate-100">
+                            <h2 className="text-lg font-bold text-slate-800">
+                                Transaksi #{selectedTransaksi.id}
+                            </h2>
                             <button
                                 onClick={() => setSelectedTransaksi(null)}
-                                className="w-9 h-9 rounded-full border border-slate-200 flex items-center justify-center text-slate-500 hover:bg-slate-50"
+                                className="w-9 h-9 rounded-full border border-slate-200 flex items-center justify-center text-slate-500 hover:bg-slate-50 transition"
                             >
                                 <X className="w-4 h-4" />
                             </button>
                         </div>
 
-                        <div className="space-y-1 text-sm mb-4">
+                        <div className="px-6 py-4 space-y-1 text-sm">
                             <p>
                                 <span className="text-slate-400">Pelanggan:</span>{" "}
-                                {selectedTransaksi.nama_pelanggan || "-"}
+                                <span className="text-slate-700 font-medium">
+                                    {selectedTransaksi.nama_pelanggan || "-"}
+                                </span>
                             </p>
                             <p>
-                                <span className="text-slate-400">Toko:</span> {selectedTransaksi.toko?.nama ?? "-"}
+                                <span className="text-slate-400">Toko:</span>{" "}
+                                <span className="text-slate-700 font-medium">
+                                    {selectedTransaksi.toko?.nama ?? "-"}
+                                </span>
                             </p>
                             <p>
                                 <span className="text-slate-400">Kasir:</span>{" "}
-                                {selectedTransaksi.pengguna?.nama ?? "-"}
+                                <span className="text-slate-700 font-medium">
+                                    {selectedTransaksi.pengguna?.nama ?? "-"}
+                                </span>
                             </p>
                         </div>
 
-                        <div className="border-t border-slate-100 pt-3 space-y-2">
+                        {/* Detail items */}
+                        <div className="px-6 border-t border-slate-100 pt-3 pb-2 space-y-2">
                             {selectedTransaksi.detail_transaksi?.map((d) => (
                                 <div key={d.id} className="flex justify-between text-sm">
                                     <span className="text-slate-600">
-                                        {d.produk?.nama ?? `Produk #${d.produk_id}`} x{d.jumlah}
+                                        {d.produk?.nama ?? `Produk #${d.produk_id}`} ×{d.jumlah}
                                     </span>
                                     <span className="text-slate-700 font-medium">
                                         Rp {Number(d.sub_total).toLocaleString("id-ID")}
@@ -726,18 +825,25 @@ export default function TransactionPage() {
                             ))}
                         </div>
 
-                        <div className="border-t border-slate-100 mt-3 pt-3 space-y-1 text-sm">
+                        {/* Summary */}
+                        <div className="px-6 border-t border-slate-100 pt-3 pb-5 space-y-1 text-sm">
                             <div className="flex justify-between text-slate-500">
                                 <span>Subtotal</span>
-                                <span>Rp {Number(selectedTransaksi.sub_total).toLocaleString("id-ID")}</span>
+                                <span>
+                                    Rp {Number(selectedTransaksi.sub_total).toLocaleString("id-ID")}
+                                </span>
                             </div>
                             <div className="flex justify-between text-slate-500">
                                 <span>Pajak</span>
-                                <span>Rp {Number(selectedTransaksi.pajak).toLocaleString("id-ID")}</span>
+                                <span>
+                                    Rp {Number(selectedTransaksi.pajak).toLocaleString("id-ID")}
+                                </span>
                             </div>
-                            <div className="flex justify-between font-bold text-slate-800">
+                            <div className="flex justify-between font-bold text-slate-800 text-base pt-1">
                                 <span>Total</span>
-                                <span>Rp {Number(selectedTransaksi.total_bayar).toLocaleString("id-ID")}</span>
+                                <span>
+                                    Rp {Number(selectedTransaksi.total_bayar).toLocaleString("id-ID")}
+                                </span>
                             </div>
                         </div>
                     </div>

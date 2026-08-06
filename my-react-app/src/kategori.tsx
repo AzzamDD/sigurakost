@@ -68,7 +68,6 @@ export default function CategoriesPage() {
     const [previewUrl, setPreviewUrl] = useState<string | null>(null);
     const [submitting, setSubmitting] = useState(false);
 
-    // ✅ State search
     const [searchQuery, setSearchQuery] = useState("");
 
 const menuItems = [
