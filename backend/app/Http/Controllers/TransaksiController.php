@@ -78,7 +78,7 @@ class TransaksiController extends Controller
         $rules = [
             'nama_pelanggan'       => 'nullable|string|max:255',
             'no_hp'                => 'nullable|string|max:20',
-            'pajak'                => 'nullable|integer|min:0',
+            'pajak' => 'required|integer|min:0',
             'items'                => 'required|array|min:1',
             'items.*.produk_id'    => 'required|integer|exists:produk,id',
             'items.*.jumlah'       => 'required|integer|min:1',
@@ -164,7 +164,6 @@ class TransaksiController extends Controller
             });
 
             return response()->json($transaksi, 201);
-
         } catch (ValidationException $e) {
             return response()->json([
                 'message' => collect($e->errors())->flatten()->first(),

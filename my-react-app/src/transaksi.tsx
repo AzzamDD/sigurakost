@@ -1,4 +1,4 @@
-import { type FormEvent, useEffect, useState } from "react";
+import { type FormEvent, useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useUser } from "./context/UserContext";
 import {
@@ -11,10 +11,13 @@ import {
 
 const API_URL = (import.meta.env.VITE_API_URL || "http://localhost:8000") + "/api";
 
+// ✅ Konstanta PPN — ubah di sini kalau tarif berubah
+const PPN_RATE = 0.11; // 11%
+
 /* ─────────────────────────── Types ─────────────────────────── */
-type TokoRef    = { id: number; nama: string };
+type TokoRef     = { id: number; nama: string };
 type PenggunaRef = { id: number; nama: string };
-type ProdukRef  = { id: number; nama: string; harga: number };
+type ProdukRef   = { id: number; nama: string; harga: number };
 type KategoriRef = { id: number; name: string };
 
 type DetailTransaksiItem = {
@@ -59,85 +62,100 @@ type ViewMode = "list" | "add";
 
 /* ─────────────────────────── Component ─────────────────────── */
 export default function TransactionPage() {
-    const navigate  = useNavigate();
+    const navigate = useNavigate();
     const { user, loading: userLoading } = useUser();
 
     const role    = user?.role?.nama?.trim().toLowerCase() ?? null;
     const isAdmin = role === "admin";
 
     /* ── State ── */
-    const [view, setView]                         = useState<ViewMode>("list");
-    const [transaksiList, setTransaksiList]       = useState<TransaksiItem[]>([]);
-    const [loadingList, setLoadingList]           = useState(true);
+    const [view, setView]                           = useState<ViewMode>("list");
+    const [transaksiList, setTransaksiList]         = useState<TransaksiItem[]>([]);
+    const [loadingList, setLoadingList]             = useState(true);
     const [selectedTransaksi, setSelectedTransaksi] = useState<TransaksiItem | null>(null);
 
     // Pagination
-    const [currentPage, setCurrentPage]   = useState(1);
-    const [lastPage, setLastPage]         = useState(1);
-    const [totalRows, setTotalRows]       = useState(0);
+    const [currentPage, setCurrentPage] = useState(1);
+    const [lastPage, setLastPage]       = useState(1);
+    const [totalRows, setTotalRows]     = useState(0);
 
     // Filter & search
     const [tokoList, setTokoList]         = useState<TokoRef[]>([]);
     const [filterTokoId, setFilterTokoId] = useState("");
     const [searchQuery, setSearchQuery]   = useState("");
+    const searchTimeout                   = useRef<ReturnType<typeof setTimeout> | null>(null);
 
     // Form — add transaksi
-    const [produkList, setProdukList]         = useState<ProdukRef[]>([]);
-    const [cart, setCart]                     = useState<CartItem[]>([]);
+    const [produkList, setProdukList]             = useState<ProdukRef[]>([]);
+    const [cart, setCart]                         = useState<CartItem[]>([]);
     const [selectedProdukId, setSelectedProdukId] = useState("");
-    const [jumlahInput, setJumlahInput]       = useState("1");
-    const [namaPelanggan, setNamaPelanggan]   = useState("");
-    const [noHp, setNoHp]                     = useState("");
-    const [pajak, setPajak]                   = useState("0");
-    const [adminTokoId, setAdminTokoId]       = useState("");
-    const [submitting, setSubmitting]         = useState(false);
+    const [jumlahInput, setJumlahInput]           = useState("1");
+    const [namaPelanggan, setNamaPelanggan]       = useState("");
+    const [noHp, setNoHp]                         = useState("");
+    const [adminTokoId, setAdminTokoId]           = useState("");
+    const [submitting, setSubmitting]             = useState(false);
 
-    // ✅ Error state untuk tampilkan pesan dari server
-    const [listError, setListError]   = useState<string | null>(null);
-    const [formError, setFormError]   = useState<string | null>(null);
+    // Error state
+    const [listError, setListError] = useState<string | null>(null);
+    const [formError, setFormError] = useState<string | null>(null);
 
-    /* ── Sidebar items ── */
+    /* ── Kalkulasi pajak otomatis ── */
+    const cartSubTotal = cart.reduce((sum, c) => sum + c.harga * c.jumlah, 0);
+
+    // ✅ Pajak dibulatkan ke integer (Math.round) karena kolom DB integer
+    const pajakNominal = Math.round(cartSubTotal * PPN_RATE);
+    const totalBayar   = cartSubTotal + pajakNominal;
+
+    /* ── Sidebar ── */
     const menuItems = [
-        { label: "Beranda",   icon: Home,          path: "/dashboard"  },
-        { label: "Produk",    icon: Package,        path: "/produk"     },
-        { label: "Kategori",  icon: Tags,           path: "/kategori"   },
-        { label: "Warehouse", icon: WarehouseIcon,  path: "/warehouse"  },
-        { label: "Merchant",  icon: Store,          path: "/merchant"   },
-        { label: "Transaksi", icon: Receipt,        path: "/transaksi", active: true },
+        { label: "Beranda",   icon: Home,         path: "/dashboard"           },
+        { label: "Produk",    icon: Package,       path: "/produk"              },
+        { label: "Kategori",  icon: Tags,          path: "/kategori"            },
+        { label: "Warehouse", icon: WarehouseIcon, path: "/warehouse"           },
+        { label: "Merchant",  icon: Store,         path: "/merchant"            },
+        { label: "Transaksi", icon: Receipt,       path: "/transaksi", active: true },
     ];
     const accountItems = [
         { label: "Roles",          icon: ShieldCheck,  path: "/role"       },
-        { label: "Manajemen User", icon: Users,         path: "/manageUser" },
-        { label: "Settings",       icon: SettingsIcon,  path: "/settings"   },
+        { label: "Manajemen User", icon: Users,        path: "/manageUser" },
+        { label: "Settings",       icon: SettingsIcon, path: "/settings"   },
     ];
 
     /* ── Helpers ── */
-    const authHeaders = () => {
-        const token = localStorage.getItem("token");
-        return {
-            Authorization: `Bearer ${token}`,
-            Accept: "application/json",
-        } as Record<string, string>;
+    const authHeaders = (): Record<string, string> => ({
+        Authorization: `Bearer ${localStorage.getItem("token")}`,
+        Accept: "application/json",
+    });
+
+    const fmt = (n: number | string) => Number(n).toLocaleString("id-ID");
+
+    // ✅ Centralized 401 handler
+    const handleUnauthorized = (status: number) => {
+        if (status === 401) {
+            localStorage.removeItem("token");
+            navigate("/login");
+            return true;
+        }
+        return false;
     };
 
-    const fmt = (n: number | string) =>
-        Number(n).toLocaleString("id-ID");
-
-    /* ── Fetch list ── */
-    const fetchTransaksi = async (page = 1) => {
+    /* ── Fetch transaksi ── */
+    const fetchTransaksi = async (page = 1, search = searchQuery) => {
         setLoadingList(true);
         setListError(null);
         try {
             const params = new URLSearchParams({ page: String(page) });
             if (isAdmin && filterTokoId) params.set("toko_id", filterTokoId);
+            if (search.trim()) params.set("search", search.trim());
 
             const res  = await fetch(`${API_URL}/transaksi?${params}`, {
                 headers: authHeaders(),
             });
             const data = await res.json();
 
+            if (handleUnauthorized(res.status)) return;
+
             if (!res.ok) {
-                // ✅ Tampilkan pesan error dari server (termasuk 403 kasir tanpa toko)
                 setListError(data.message || "Gagal memuat data transaksi.");
                 setTransaksiList([]);
                 return;
@@ -157,37 +175,73 @@ export default function TransactionPage() {
 
     const fetchToko = async () => {
         try {
-            const res = await fetch(`${API_URL}/toko`, { headers: authHeaders() });
-            if (res.ok) setTokoList(await res.json());
+            const res  = await fetch(`${API_URL}/toko`, { headers: authHeaders() });
+            if (res.ok) {
+                const json = await res.json();
+                // ✅ Handle baik array maupun paginated response
+                setTokoList(Array.isArray(json) ? json : (json.data ?? []));
+            }
         } catch { /* silent */ }
     };
 
     const fetchProduk = async () => {
         try {
-            const res = await fetch(`${API_URL}/produk`, { headers: authHeaders() });
-            if (res.ok) setProdukList(await res.json());
+            const res  = await fetch(`${API_URL}/produk`, { headers: authHeaders() });
+            if (res.ok) {
+                const json = await res.json();
+                setProdukList(Array.isArray(json) ? json : (json.data ?? []));
+            }
         } catch { /* silent */ }
     };
 
     /* ── Effects ── */
+
+    // Fetch toko sekali saja saat mount
     useEffect(() => {
         if (userLoading || !role) return;
         fetchToko();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [userLoading, role]);
+
+    // Fetch transaksi saat filter toko berubah
+    useEffect(() => {
+        if (userLoading || !role) return;
         fetchTransaksi(1);
-        // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [userLoading, role, filterTokoId]);
 
+    // Fetch produk hanya saat buka form add
     useEffect(() => {
         if (view === "add") fetchProduk();
-        // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [view]);
+
+    // Cleanup search timeout
+    useEffect(() => {
+        return () => {
+            if (searchTimeout.current) clearTimeout(searchTimeout.current);
+        };
+    }, []);
+
+    /* ── Search dengan debounce ── */
+    const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const val = e.target.value;
+        setSearchQuery(val);
+        if (searchTimeout.current) clearTimeout(searchTimeout.current);
+        searchTimeout.current = setTimeout(() => {
+            fetchTransaksi(1, val);
+        }, 400);
+    };
 
     /* ── Cart logic ── */
     const addToCart = () => {
         if (!selectedProdukId) return;
         const produk = produkList.find((p) => p.id === Number(selectedProdukId));
         if (!produk) return;
+
         const jumlah = Math.max(1, Number(jumlahInput) || 1);
+        // ✅ Reset ke "1" kalau input tidak valid
+        if (Number(jumlahInput) < 1) setJumlahInput("1");
 
         setCart((prev) => {
             const existing = prev.find((c) => c.produk_id === produk.id);
@@ -198,7 +252,10 @@ export default function TransactionPage() {
                         : c
                 );
             }
-            return [...prev, { produk_id: produk.id, nama: produk.nama, harga: produk.harga, jumlah }];
+            return [
+                ...prev,
+                { produk_id: produk.id, nama: produk.nama, harga: produk.harga, jumlah },
+            ];
         });
 
         setSelectedProdukId("");
@@ -207,28 +264,22 @@ export default function TransactionPage() {
 
     const updateCartJumlah = (produkId: number, delta: number) => {
         setCart((prev) =>
-            prev
-                .map((c) =>
-                    c.produk_id === produkId
-                        ? { ...c, jumlah: Math.max(1, c.jumlah + delta) }
-                        : c
-                )
-                .filter((c) => c.jumlah > 0)
+            prev.map((c) =>
+                c.produk_id === produkId
+                    ? { ...c, jumlah: Math.max(1, c.jumlah + delta) }
+                    : c
+            )
         );
     };
 
     const removeFromCart = (produkId: number) =>
         setCart((prev) => prev.filter((c) => c.produk_id !== produkId));
 
-    const cartSubTotal = cart.reduce((sum, c) => sum + c.harga * c.jumlah, 0);
-    const totalBayar   = cartSubTotal + (Number(pajak) || 0);
-
     /* ── Form ── */
     const resetForm = () => {
         setCart([]);
         setNamaPelanggan("");
         setNoHp("");
-        setPajak("0");
         setAdminTokoId("");
         setSelectedProdukId("");
         setJumlahInput("1");
@@ -256,7 +307,8 @@ export default function TransactionPage() {
             const payload: Record<string, unknown> = {
                 nama_pelanggan: namaPelanggan || null,
                 no_hp:          noHp || null,
-                pajak:          Number(pajak) || 0,
+                // ✅ Kirim pajak sebagai nominal integer hasil kalkulasi otomatis
+                pajak:          pajakNominal,
                 items:          cart.map((c) => ({
                     produk_id: c.produk_id,
                     jumlah:    c.jumlah,
@@ -271,11 +323,12 @@ export default function TransactionPage() {
             });
             const data = await res.json();
 
+            if (handleUnauthorized(res.status)) return;
+
             if (!res.ok) {
-                // ✅ Tampilkan pesan spesifik dari backend (stok kurang, dll)
                 if (data.errors) {
                     const firstErr = Object.values(data.errors)[0];
-                    setFormError(Array.isArray(firstErr) ? firstErr[0] : data.message);
+                    setFormError(Array.isArray(firstErr) ? firstErr[0] as string : data.message);
                 } else {
                     setFormError(data.message || "Gagal membuat transaksi.");
                 }
@@ -293,17 +346,24 @@ export default function TransactionPage() {
 
     const handleVoid = async (t: TransaksiItem) => {
         if (!confirm(`Batalkan transaksi #${t.id}? Stok akan dikembalikan.`)) return;
+
+        // ✅ Tutup modal kalau yang di-void sedang dibuka
+        if (selectedTransaksi?.id === t.id) setSelectedTransaksi(null);
+
         try {
             const res  = await fetch(`${API_URL}/transaksi/${t.id}`, {
                 method:  "DELETE",
                 headers: authHeaders(),
             });
             const data = await res.json();
+
+            if (handleUnauthorized(res.status)) return;
             if (!res.ok) {
                 alert(data.message || "Gagal membatalkan transaksi.");
                 return;
             }
-            // Kalau halaman sekarang > 1 dan setelah hapus tinggal kosong → balik ke prev page
+
+            // ✅ Mundur 1 halaman kalau item terakhir di halaman > 1
             const targetPage =
                 transaksiList.length === 1 && currentPage > 1
                     ? currentPage - 1
@@ -313,17 +373,6 @@ export default function TransactionPage() {
             alert("Tidak dapat terhubung ke server.");
         }
     };
-
-    /* ── Client-side search (atas hasil page aktif) ── */
-    const filteredTransaksi = transaksiList.filter((t) => {
-        const q = searchQuery.toLowerCase().trim();
-        if (!q) return true;
-        return (
-            (t.nama_pelanggan ?? "").toLowerCase().includes(q) ||
-            String(t.id).includes(q) ||
-            (t.toko?.nama ?? "").toLowerCase().includes(q)
-        );
-    });
 
     /* ─────────────── Guard ─────────────── */
     if (userLoading) {
@@ -426,7 +475,7 @@ export default function TransactionPage() {
                                     type="text"
                                     placeholder="Cari ID, pelanggan, toko..."
                                     value={searchQuery}
-                                    onChange={(e) => setSearchQuery(e.target.value)}
+                                    onChange={handleSearchChange}
                                     className="w-full rounded-full border border-slate-200 bg-white pl-9 pr-4 py-2 text-sm text-slate-600 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
                                 />
                             </div>
@@ -462,7 +511,6 @@ export default function TransactionPage() {
                                         <span className="text-blue-700">{totalRows}</span> Total Transaksi
                                     </p>
                                     <div className="flex items-center gap-3">
-                                        {/* Filter toko — admin only */}
                                         {isAdmin && (
                                             <div className="relative">
                                                 <select
@@ -493,7 +541,7 @@ export default function TransactionPage() {
                                     </div>
                                 </div>
 
-                                {/* ✅ Error banner */}
+                                {/* Error banner */}
                                 {listError && (
                                     <div className="flex items-center gap-2 px-5 py-3 bg-rose-50 border-b border-rose-100 text-rose-600 text-sm">
                                         <AlertCircle className="w-4 h-4 shrink-0" />
@@ -516,7 +564,6 @@ export default function TransactionPage() {
                                         </thead>
                                         <tbody>
                                             {loadingList ? (
-                                                // ✅ Skeleton loading rows
                                                 Array.from({ length: 5 }).map((_, i) => (
                                                     <tr key={i} className="border-t border-slate-100">
                                                         {Array.from({ length: 6 }).map((__, j) => (
@@ -526,7 +573,7 @@ export default function TransactionPage() {
                                                         ))}
                                                     </tr>
                                                 ))
-                                            ) : filteredTransaksi.length === 0 ? (
+                                            ) : transaksiList.length === 0 ? (
                                                 <tr>
                                                     <td colSpan={6} className="px-5 py-14 text-center">
                                                         <Receipt className="w-8 h-8 text-slate-200 mx-auto mb-2" />
@@ -536,7 +583,7 @@ export default function TransactionPage() {
                                                     </td>
                                                 </tr>
                                             ) : (
-                                                filteredTransaksi.map((t) => (
+                                                transaksiList.map((t) => (
                                                     <tr
                                                         key={t.id}
                                                         className="border-t border-slate-100 hover:bg-slate-50 transition"
@@ -585,7 +632,7 @@ export default function TransactionPage() {
                                     </table>
                                 </div>
 
-                                {/* ✅ Pagination */}
+                                {/* Pagination */}
                                 {!loadingList && !listError && lastPage > 1 && (
                                     <div className="flex items-center justify-between px-5 py-4 border-t border-slate-100">
                                         <p className="text-xs text-slate-400">
@@ -600,7 +647,6 @@ export default function TransactionPage() {
                                                 <PagePrev className="w-4 h-4" />
                                             </button>
 
-                                            {/* Page numbers */}
                                             {Array.from({ length: lastPage }, (_, i) => i + 1)
                                                 .filter((p) =>
                                                     p === 1 ||
@@ -616,7 +662,7 @@ export default function TransactionPage() {
                                                 }, [])
                                                 .map((p, idx) =>
                                                     p === "..." ? (
-                                                        <span key={`ellipsis-${idx}`} className="px-1 text-slate-300 text-sm">
+                                                        <span key={`e-${idx}`} className="px-1 text-slate-300 text-sm">
                                                             …
                                                         </span>
                                                     ) : (
@@ -799,35 +845,31 @@ export default function TransactionPage() {
                             <div className="bg-white rounded-2xl border border-slate-200 p-5 h-fit space-y-4 shadow-sm">
                                 <p className="text-sm font-semibold text-slate-800">Ringkasan</p>
 
-                                <div>
-                                    <label className="text-xs text-slate-400 mb-1 block">
-                                        Pajak (nominal, opsional)
-                                    </label>
-                                    <input
-                                        type="number"
-                                        min={0}
-                                        value={pajak}
-                                        onChange={(e) => setPajak(e.target.value)}
-                                        className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                    />
-                                </div>
-
                                 <div className="border-t border-slate-100 pt-3 space-y-1.5 text-sm">
                                     <div className="flex justify-between text-slate-500">
                                         <span>Subtotal</span>
                                         <span>Rp {fmt(cartSubTotal)}</span>
                                     </div>
+
+                                    {/* ✅ Pajak otomatis — tidak bisa diubah */}
                                     <div className="flex justify-between text-slate-500">
-                                        <span>Pajak</span>
-                                        <span>Rp {fmt(Number(pajak) || 0)}</span>
+                                        <span className="flex items-center gap-1">
+                                            PPN
+                                            {/* ✅ Badge persentase */}
+                                            <span className="text-[10px] font-semibold bg-slate-100 text-slate-400 rounded-full px-1.5 py-0.5">
+                                                {(PPN_RATE * 100).toFixed(0)}%
+                                            </span>
+                                        </span>
+                                        <span>Rp {fmt(pajakNominal)}</span>
                                     </div>
-                                    <div className="flex justify-between font-bold text-slate-800 text-base pt-1">
+
+                                    <div className="flex justify-between font-bold text-slate-800 text-base pt-1 border-t border-slate-100">
                                         <span>Total</span>
                                         <span>Rp {fmt(totalBayar)}</span>
                                     </div>
                                 </div>
 
-                                {/* ✅ Form error banner */}
+                                {/* Form error banner */}
                                 {formError && (
                                     <div className="flex items-start gap-2 bg-rose-50 border border-rose-100 rounded-xl px-4 py-3 text-rose-600 text-xs">
                                         <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
@@ -837,7 +879,7 @@ export default function TransactionPage() {
 
                                 <button
                                     type="submit"
-                                    disabled={submitting}
+                                    disabled={submitting || cart.length === 0}
                                     className="w-full bg-blue-700 hover:bg-blue-800 text-white font-semibold py-3 rounded-full transition disabled:opacity-50 disabled:cursor-not-allowed"
                                 >
                                     {submitting ? "Menyimpan..." : "Simpan Transaksi"}
@@ -919,10 +961,16 @@ export default function TransactionPage() {
                                 <span>Rp {fmt(selectedTransaksi.sub_total)}</span>
                             </div>
                             <div className="flex justify-between text-slate-500">
-                                <span>Pajak</span>
+                                {/* ✅ Tampilkan label PPN di modal juga */}
+                                <span className="flex items-center gap-1">
+                                    PPN
+                                    <span className="text-[10px] font-semibold bg-slate-100 text-slate-400 rounded-full px-1.5 py-0.5">
+                                        {(PPN_RATE * 100).toFixed(0)}%
+                                    </span>
+                                </span>
                                 <span>Rp {fmt(selectedTransaksi.pajak)}</span>
                             </div>
-                            <div className="flex justify-between font-bold text-slate-800 text-base pt-1">
+                            <div className="flex justify-between font-bold text-slate-800 text-base pt-1 border-t border-slate-100">
                                 <span>Total</span>
                                 <span>Rp {fmt(selectedTransaksi.total_bayar)}</span>
                             </div>
