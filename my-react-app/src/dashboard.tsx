@@ -429,49 +429,6 @@ export default function Dashboard() {
                             </div>
                         </div>
                     )}
-
-                    <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
-                        {/* Table header */}
-                        <div className="overflow-x-auto">
-                            <table className="w-full text-sm">
-                                <thead>
-                                    <tr className="text-left text-xs text-slate-400 uppercase tracking-wide bg-slate-50">
-                                        <th className="px-5 py-3 font-medium">Product Name</th>
-                                        <th className="px-5 py-3 font-medium">Date</th>
-                                        <th className="px-5 py-3 font-medium">Qty</th>
-                                        <th className="px-5 py-3 font-medium">Total Price</th>
-                                        <th className="px-5 py-3 font-medium">Kategori</th>
-                                        <th className="px-5 py-3 font-medium text-right">Aksi</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {/* Kosong — transaksi belum punya menu/endpoint */}
-                                    <tr>
-                                        <td colSpan={6} className="px-5 py-16 text-center">
-                                            <div className="flex flex-col items-center gap-2">
-                                                <ShoppingBag className="w-8 h-8 text-slate-200" />
-                                                <p className="text-sm font-medium text-slate-400">
-                                                    Belum ada transaksi
-                                                </p>
-                                                <p className="text-xs text-slate-300">
-                                                    Data transaksi akan muncul di sini setelah tersedia
-                                                </p>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                </tbody>
-                            </table>
-                        </div>
-
-                        {/* Grand total — kosong */}
-                        <div className="flex items-center gap-2 px-5 py-4 border-t border-slate-100">
-                            <ShoppingBag className="w-4 h-4 text-slate-400" />
-                            <span className="text-sm text-slate-500">Grand Total:</span>
-                            <span className="text-sm font-semibold text-blue-700">
-                                Rp 0
-                            </span>
-                        </div>
-                    </div>
                 </div>
             </div>
         </div>
