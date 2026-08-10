@@ -726,6 +726,10 @@ const menuItems = [
                                             </div>
 
                                             <div className="flex items-center gap-6 shrink-0">
+                                                <div className="hidden sm:flex items-center gap-1.5 text-sm text-slate-500">
+                                                    <Boxes className="w-4 h-4 text-slate-400" />
+                                                    {w.produk_count ?? 0} Products
+                                                </div>
                                                 <button
                                                     onClick={() => openWarehouseDetail(w)}
                                                     className="inline-flex items-center gap-1 bg-blue-50 text-blue-700 hover:bg-blue-100 text-xs font-medium px-3.5 py-1.5 rounded-full transition"
