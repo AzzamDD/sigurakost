@@ -15,9 +15,9 @@ const API_URL = (import.meta.env.VITE_API_URL || "http://localhost:8000") + "/ap
 const PPN_RATE = 0.11; // 11%
 
 /* ─────────────────────────── Types ─────────────────────────── */
-type TokoRef     = { id: number; nama: string };
+type TokoRef = { id: number; nama: string };
 type PenggunaRef = { id: number; nama: string };
-type ProdukRef   = { id: number; nama: string; harga: number };
+type ProdukRef = { id: number; nama: string; harga: number };
 type KategoriRef = { id: number; name: string };
 
 type DetailTransaksiItem = {
@@ -65,35 +65,35 @@ export default function TransactionPage() {
     const navigate = useNavigate();
     const { user, loading: userLoading } = useUser();
 
-    const role    = user?.role?.nama?.trim().toLowerCase() ?? null;
+    const role = user?.role?.nama?.trim().toLowerCase() ?? null;
     const isAdmin = role === "admin";
 
     /* ── State ── */
-    const [view, setView]                           = useState<ViewMode>("list");
-    const [transaksiList, setTransaksiList]         = useState<TransaksiItem[]>([]);
-    const [loadingList, setLoadingList]             = useState(true);
+    const [view, setView] = useState<ViewMode>("list");
+    const [transaksiList, setTransaksiList] = useState<TransaksiItem[]>([]);
+    const [loadingList, setLoadingList] = useState(true);
     const [selectedTransaksi, setSelectedTransaksi] = useState<TransaksiItem | null>(null);
 
     // Pagination
     const [currentPage, setCurrentPage] = useState(1);
-    const [lastPage, setLastPage]       = useState(1);
-    const [totalRows, setTotalRows]     = useState(0);
+    const [lastPage, setLastPage] = useState(1);
+    const [totalRows, setTotalRows] = useState(0);
 
     // Filter & search
-    const [tokoList, setTokoList]         = useState<TokoRef[]>([]);
+    const [tokoList, setTokoList] = useState<TokoRef[]>([]);
     const [filterTokoId, setFilterTokoId] = useState("");
-    const [searchQuery, setSearchQuery]   = useState("");
-    const searchTimeout                   = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const [searchQuery, setSearchQuery] = useState("");
+    const searchTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
 
     // Form — add transaksi
-    const [produkList, setProdukList]             = useState<ProdukRef[]>([]);
-    const [cart, setCart]                         = useState<CartItem[]>([]);
+    const [produkList, setProdukList] = useState<ProdukRef[]>([]);
+    const [cart, setCart] = useState<CartItem[]>([]);
     const [selectedProdukId, setSelectedProdukId] = useState("");
-    const [jumlahInput, setJumlahInput]           = useState("1");
-    const [namaPelanggan, setNamaPelanggan]       = useState("");
-    const [noHp, setNoHp]                         = useState("");
-    const [adminTokoId, setAdminTokoId]           = useState("");
-    const [submitting, setSubmitting]             = useState(false);
+    const [jumlahInput, setJumlahInput] = useState("1");
+    const [namaPelanggan, setNamaPelanggan] = useState("");
+    const [noHp, setNoHp] = useState("");
+    const [adminTokoId, setAdminTokoId] = useState("");
+    const [submitting, setSubmitting] = useState(false);
 
     // Error state
     const [listError, setListError] = useState<string | null>(null);
@@ -104,21 +104,21 @@ export default function TransactionPage() {
 
     // ✅ Pajak dibulatkan ke integer (Math.round) karena kolom DB integer
     const pajakNominal = Math.round(cartSubTotal * PPN_RATE);
-    const totalBayar   = cartSubTotal + pajakNominal;
+    const totalBayar = cartSubTotal + pajakNominal;
 
     /* ── Sidebar ── */
     const menuItems = [
-        { label: "Beranda",   icon: Home,         path: "/dashboard"           },
-        { label: "Produk",    icon: Package,       path: "/produk"              },
-        { label: "Kategori",  icon: Tags,          path: "/kategori"            },
-        { label: "Warehouse", icon: WarehouseIcon, path: "/warehouse"           },
-        { label: "Merchant",  icon: Store,         path: "/merchant"            },
-        { label: "Transaksi", icon: Receipt,       path: "/transaksi", active: true },
+        { label: "Beranda", icon: Home, path: "/dashboard" },
+        { label: "Produk", icon: Package, path: "/produk" },
+        { label: "Kategori", icon: Tags, path: "/kategori" },
+        { label: "Warehouse", icon: WarehouseIcon, path: "/warehouse" },
+        { label: "Merchant", icon: Store, path: "/merchant" },
+        { label: "Transaksi", icon: Receipt, path: "/transaksi", active: true },
     ];
     const accountItems = [
-        { label: "Roles",          icon: ShieldCheck,  path: "/role"       },
-        { label: "Manajemen User", icon: Users,        path: "/manageUser" },
-        { label: "Settings",       icon: SettingsIcon, path: "/settings"   },
+        { label: "Roles", icon: ShieldCheck, path: "/role" },
+        { label: "Manajemen User", icon: Users, path: "/manageUser" },
+        { label: "Settings", icon: SettingsIcon, path: "/settings" },
     ];
 
     /* ── Helpers ── */
@@ -148,7 +148,7 @@ export default function TransactionPage() {
             if (isAdmin && filterTokoId) params.set("toko_id", filterTokoId);
             if (search.trim()) params.set("search", search.trim());
 
-            const res  = await fetch(`${API_URL}/transaksi?${params}`, {
+            const res = await fetch(`${API_URL}/transaksi?${params}`, {
                 headers: authHeaders(),
             });
             const data = await res.json();
@@ -175,7 +175,7 @@ export default function TransactionPage() {
 
     const fetchToko = async () => {
         try {
-            const res  = await fetch(`${API_URL}/toko`, { headers: authHeaders() });
+            const res = await fetch(`${API_URL}/toko`, { headers: authHeaders() });
             if (res.ok) {
                 const json = await res.json();
                 // ✅ Handle baik array maupun paginated response
@@ -186,7 +186,7 @@ export default function TransactionPage() {
 
     const fetchProduk = async () => {
         try {
-            const res  = await fetch(`${API_URL}/produk`, { headers: authHeaders() });
+            const res = await fetch(`${API_URL}/produk`, { headers: authHeaders() });
             if (res.ok) {
                 const json = await res.json();
                 setProdukList(Array.isArray(json) ? json : (json.data ?? []));
@@ -200,20 +200,20 @@ export default function TransactionPage() {
     useEffect(() => {
         if (userLoading || !role) return;
         fetchToko();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [userLoading, role]);
 
     // Fetch transaksi saat filter toko berubah
     useEffect(() => {
         if (userLoading || !role) return;
         fetchTransaksi(1);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [userLoading, role, filterTokoId]);
 
     // Fetch produk hanya saat buka form add
     useEffect(() => {
         if (view === "add") fetchProduk();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [view]);
 
     // Cleanup search timeout
@@ -286,7 +286,7 @@ export default function TransactionPage() {
         setFormError(null);
     };
 
-    const openAdd  = () => { resetForm(); setView("add"); };
+    const openAdd = () => { resetForm(); setView("add"); };
     const closeAdd = () => { resetForm(); setView("list"); };
 
     const handleSubmit = async (e: FormEvent) => {
@@ -306,20 +306,20 @@ export default function TransactionPage() {
         try {
             const payload: Record<string, unknown> = {
                 nama_pelanggan: namaPelanggan || null,
-                no_hp:          noHp || null,
+                no_hp: noHp || null,
                 // ✅ Kirim pajak sebagai nominal integer hasil kalkulasi otomatis
-                pajak:          pajakNominal,
-                items:          cart.map((c) => ({
+                pajak: pajakNominal,
+                items: cart.map((c) => ({
                     produk_id: c.produk_id,
-                    jumlah:    c.jumlah,
+                    jumlah: c.jumlah,
                 })),
             };
             if (isAdmin) payload.toko_id = Number(adminTokoId);
 
-            const res  = await fetch(`${API_URL}/transaksi`, {
-                method:  "POST",
+            const res = await fetch(`${API_URL}/transaksi`, {
+                method: "POST",
                 headers: { "Content-Type": "application/json", ...authHeaders() },
-                body:    JSON.stringify(payload),
+                body: JSON.stringify(payload),
             });
             const data = await res.json();
 
@@ -335,8 +335,12 @@ export default function TransactionPage() {
                 return;
             }
 
+            const savedTransaksi = data as TransaksiItem;
             await fetchTransaksi(1);
             closeAdd();
+            printStruk(savedTransaksi);
+
+
         } catch {
             setFormError("Tidak dapat terhubung ke server.");
         } finally {
@@ -351,8 +355,8 @@ export default function TransactionPage() {
         if (selectedTransaksi?.id === t.id) setSelectedTransaksi(null);
 
         try {
-            const res  = await fetch(`${API_URL}/transaksi/${t.id}`, {
-                method:  "DELETE",
+            const res = await fetch(`${API_URL}/transaksi/${t.id}`, {
+                method: "DELETE",
                 headers: authHeaders(),
             });
             const data = await res.json();
@@ -372,6 +376,63 @@ export default function TransactionPage() {
         } catch {
             alert("Tidak dapat terhubung ke server.");
         }
+    };
+
+    const printStruk = (t: TransaksiItem) => {
+        const win = window.open("", "_blank", "width=380,height=600");
+        if (!win) {
+            alert("Popup diblokir browser. Izinkan popup untuk cetak struk.");
+            return;
+        }
+        const items = t.detail_transaksi ?? [];
+        const itemsHtml = items
+            .map(
+                (d) => `
+        <tr>
+            <td>${d.produk?.nama ?? `Produk #${d.produk_id}`} x${d.jumlah}</td>
+            <td style="text-align:right">Rp ${fmt(d.sub_total)}</td>
+        </tr>`
+            )
+            .join("");
+
+        win.document.write(`
+        <html>
+        <head>
+            <title>Struk #${t.id}</title>
+            <style>
+                body { font-family: monospace; font-size: 12px; width: 280px; margin: 0 auto; padding: 12px; }
+                h2 { text-align:center; margin:0 0 4px; }
+                p { margin: 2px 0; text-align:center; }
+                table { width:100%; border-collapse: collapse; margin-top:8px; }
+                td { padding: 2px 0; }
+                .line { border-top: 1px dashed #000; margin: 6px 0; }
+                .total { font-weight:bold; }
+            </style>
+        </head>
+        <body>
+            <h2>SiguraKost</h2>
+            <p>${t.toko?.nama ?? "-"}</p>
+            <p>Kasir: ${t.pengguna?.nama ?? "-"}</p>
+            ${t.nama_pelanggan ? `<p>Pelanggan: ${t.nama_pelanggan}</p>` : ""}
+            <div class="line"></div>
+            <table>${itemsHtml}</table>
+            <div class="line"></div>
+            <table>
+                <tr><td>Subtotal</td><td style="text-align:right">Rp ${fmt(t.sub_total)}</td></tr>
+                <tr><td>PPN ${(PPN_RATE * 100).toFixed(0)}%</td><td style="text-align:right">Rp ${fmt(t.pajak)}</td></tr>
+                <tr class="total"><td>TOTAL</td><td style="text-align:right">Rp ${fmt(t.total_bayar)}</td></tr>
+            </table>
+            <div class="line"></div>
+            <p>Terima kasih!</p>
+        </body>
+        </html>
+    `);
+        win.document.close();
+        win.focus();
+        setTimeout(() => {
+            win.print();
+            win.close();
+        }, 250);
     };
 
     /* ─────────────── Guard ─────────────── */
@@ -416,11 +477,10 @@ export default function TransactionPage() {
                             <li key={label}>
                                 <button
                                     onClick={() => navigate(path)}
-                                    className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition ${
-                                        active
-                                            ? "bg-blue-50 text-blue-700"
-                                            : "text-slate-500 hover:bg-slate-50 hover:text-slate-700"
-                                    }`}
+                                    className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition ${active
+                                        ? "bg-blue-50 text-blue-700"
+                                        : "text-slate-500 hover:bg-slate-50 hover:text-slate-700"
+                                        }`}
                                 >
                                     <Icon className="w-[18px] h-[18px]" />
                                     {label}
@@ -613,6 +673,14 @@ export default function TransactionPage() {
                                                                 >
                                                                     Detail
                                                                     <ChevronRight className="w-3.5 h-3.5" />
+
+                                                                </button>
+                                                                <button
+                                                                    onClick={() => printStruk(t)}  
+                                                                    className="inline-flex items-center gap-1.5 bg-slate-900 hover:bg-black text-white text-xs font-medium px-3.5 py-1.5 rounded-full transition"
+                                                                >
+                                                                    <Receipt className="w-3.5 h-3.5" />
+                                                                    Cetak Struk
                                                                 </button>
                                                                 {isAdmin && (
                                                                     <button
@@ -669,11 +737,10 @@ export default function TransactionPage() {
                                                         <button
                                                             key={p}
                                                             onClick={() => fetchTransaksi(p as number)}
-                                                            className={`w-8 h-8 rounded-full text-sm font-medium transition ${
-                                                                p === currentPage
-                                                                    ? "bg-blue-700 text-white"
-                                                                    : "border border-slate-200 text-slate-500 hover:bg-slate-50"
-                                                            }`}
+                                                            className={`w-8 h-8 rounded-full text-sm font-medium transition ${p === currentPage
+                                                                ? "bg-blue-700 text-white"
+                                                                : "border border-slate-200 text-slate-500 hover:bg-slate-50"
+                                                                }`}
                                                         >
                                                             {p}
                                                         </button>
@@ -698,6 +765,7 @@ export default function TransactionPage() {
                     {view === "add" && (
                         <form
                             onSubmit={handleSubmit}
+
                             className="max-w-5xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-5"
                         >
                             {/* Kiri */}
@@ -925,9 +993,9 @@ export default function TransactionPage() {
                         <div className="px-6 py-4 space-y-1.5 text-sm">
                             {[
                                 ["Pelanggan", selectedTransaksi.nama_pelanggan || "—"],
-                                ["No HP",     selectedTransaksi.no_hp || "—"],
-                                ["Toko",      selectedTransaksi.toko?.nama ?? "—"],
-                                ["Kasir",     selectedTransaksi.pengguna?.nama ?? "—"],
+                                ["No HP", selectedTransaksi.no_hp || "—"],
+                                ["Toko", selectedTransaksi.toko?.nama ?? "—"],
+                                ["Kasir", selectedTransaksi.pengguna?.nama ?? "—"],
                             ].map(([label, value]) => (
                                 <p key={label}>
                                     <span className="text-slate-400 w-24 inline-block">{label}:</span>
