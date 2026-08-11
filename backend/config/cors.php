@@ -8,10 +8,12 @@ return [
 
     'allowed_origins' => [
         env('FRONTEND_URL', 'http://localhost:5173'),
-    ], 
+    ],
 
     'allowed_origins_patterns' => [
         '#^https://sigurakost-.*-dodotpongs-projects\.vercel\.app$#',
+        'https://sentra-gg.vercel.app',          // ✅ TAMBAH INI
+        'http://localhost:5173',
     ],
 
     'allowed_headers' => ['*'],
