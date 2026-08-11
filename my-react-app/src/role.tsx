@@ -186,7 +186,7 @@ const menuItems = [
             <aside className="w-60 shrink-0 bg-white border-r border-slate-200 flex-col hidden md:flex">
                 <div className="flex items-center gap-2 px-6 py-6">
                     <img
-                        src="/assets/sentra.svg"
+                        src="public/assets/sentra.svg"
                         alt="Sentra logo"
                         className="w-6 h-6 object-contain bg-slate-200 rounded-sm"
                         onError={(e) => { e.currentTarget.style.display = "none"; }}

@@ -87,7 +87,7 @@ export default function ResetPasswordPage() {
                     <div className="w-full md:w-1/2 bg-white px-8 py-10 sm:px-12 sm:py-12 flex flex-col justify-center">
                         <div className="flex items-center gap-2 mb-10">
                             <img
-                                src="/assets/sentra.svg"
+                                src="public/assets/sentra.svg"
                                 alt="Sentra logo"
                                 className="w-7 h-7 object-contain"
                             />

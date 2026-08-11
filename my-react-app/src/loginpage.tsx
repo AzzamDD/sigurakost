@@ -59,7 +59,7 @@ export default function LoginPage() {
         <div className="w-full md:w-[45%] px-8 py-10 md:px-12 md:py-14 flex flex-col justify-center">
           <div className="flex items-center gap-2 mb-10">
             <img
-              src="/assets/sentra.svg"
+              src="public/assets/sentra.svg"
               alt="Sentra logo"
               className="w-8 h-8 shrink-0 object-contain"
             />
