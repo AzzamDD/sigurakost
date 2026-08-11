@@ -159,7 +159,7 @@ export default function Dashboard() {
             {/* Sidebar */}
             <aside className="w-60 shrink-0 bg-white border-r border-slate-200 flex flex-col">
                 <div className="flex items-center gap-2 px-6 py-6">
-                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 140" width="360" height="140" role="img" aria-label="sentra logo">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 140" width="90" height="35" role="img" aria-label="sentra logo">
                         <defs>
                             <linearGradient id="brand" x1="0" y1="0" x2="1" y2="1">
                                 <stop offset="0" stop-color="#6366F1" />
