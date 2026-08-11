@@ -10,8 +10,7 @@ class GudangController extends Controller
 {
     public function index(): JsonResponse
     {
-        // withCount biar frontend bisa langsung tau jumlah produk tanpa fetch terpisah
-        $gudang = Gudang::withCount('stokGudang')->get();
+        $gudang = Gudang::withCount('stokGudang as produk_count')->get();
 
         return response()->json($gudang);
     }
