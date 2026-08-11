@@ -252,12 +252,12 @@ const menuItems = [
             <aside className="w-60 shrink-0 bg-white border-r border-slate-200 flex flex-col">
                 <div className="flex items-center gap-2 px-6 py-6">
                     <img
-                        src="/assets/sigurakost.png"
-                        alt="SiguraKost logo"
+                        src="/assets/sentra.svg"
+                        alt="Sentra logo"
                         className="w-6 h-6 object-contain"
                     />
                     <span className="text-lg font-extrabold text-blue-700 tracking-tight">
-                        SiguraKost
+                        Sentra
                     </span>
                 </div>
 
@@ -536,7 +536,7 @@ const menuItems = [
                             Account
                         </h2>
                         <p className="text-xs text-slate-400 mb-5">
-                            Sign out of your SiguraKost account on this device.
+                            Sign out of your Setra account on this device.
                         </p>
 
                         <button

@@ -21,7 +21,7 @@ import {
     AlignLeft,
     X,
     Receipt,
-    
+
 } from "lucide-react";
 
 const API_URL = (import.meta.env.VITE_API_URL || "http://localhost:8000") + "/api";
@@ -70,14 +70,14 @@ export default function CategoriesPage() {
 
     const [searchQuery, setSearchQuery] = useState("");
 
-const menuItems = [
-    { label: "Beranda", icon: Home, path: "/dashboard", active: false },
-    { label: "Produk", icon: Package, path: "/produk", active: false },
-    { label: "Kategori", icon: Tags, path: "/kategori", active: true },
-    { label: "Warehouse", icon: WarehouseIcon, path: "/warehouse", active: false },
-    { label: "Merchant", icon: Store, path: "/merchant", active: false },
-    { label: "Transaksi", icon: Receipt, path: "/transaksi", active: false },
-];
+    const menuItems = [
+        { label: "Beranda", icon: Home, path: "/dashboard", active: false },
+        { label: "Produk", icon: Package, path: "/produk", active: false },
+        { label: "Kategori", icon: Tags, path: "/kategori", active: true },
+        { label: "Warehouse", icon: WarehouseIcon, path: "/warehouse", active: false },
+        { label: "Merchant", icon: Store, path: "/merchant", active: false },
+        { label: "Transaksi", icon: Receipt, path: "/transaksi", active: false },
+    ];
 
     const accountItems = [
         { label: "Roles", icon: ShieldCheck, path: "/role" },
@@ -251,8 +251,8 @@ const menuItems = [
         view === "list"
             ? "Manage Categories"
             : view === "add"
-            ? "Add New Category"
-            : "Edit Category";
+                ? "Add New Category"
+                : "Edit Category";
 
     const displayedPhoto = previewUrl ?? form.foto;
 
@@ -262,12 +262,12 @@ const menuItems = [
             <aside className="w-60 shrink-0 bg-white border-r border-slate-200 flex flex-col">
                 <div className="flex items-center gap-2 px-6 py-6">
                     <img
-                        src="/assets/sigurakost.png"
-                        alt="SiguraKost logo"
-                        className="w-6 h-6 object-contain"
+                        src="/assets/sentra.svg"
+                        alt="Sentra logo"
+                        className="w-7 h-7 object-contain"
                     />
                     <span className="text-lg font-extrabold text-blue-700 tracking-tight">
-                        SiguraKost
+                        Sentra
                     </span>
                 </div>
 
@@ -280,11 +280,10 @@ const menuItems = [
                             <li key={label}>
                                 <button
                                     onClick={() => navigate(path)}
-                                    className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition ${
-                                        active
+                                    className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition ${active
                                             ? "bg-blue-50 text-blue-700"
                                             : "text-slate-500 hover:bg-slate-50 hover:text-slate-700"
-                                    }`}
+                                        }`}
                                 >
                                     <Icon className="w-[18px] h-[18px]" />
                                     {label}

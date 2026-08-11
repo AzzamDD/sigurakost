@@ -410,7 +410,7 @@ export default function TransactionPage() {
             </style>
         </head>
         <body>
-            <h2>SiguraKost</h2>
+            <h2>Tokoku</h2>
             <p>${t.toko?.nama ?? "-"}</p>
             <p>Kasir: ${t.pengguna?.nama ?? "-"}</p>
             ${t.nama_pelanggan ? `<p>Pelanggan: ${t.nama_pelanggan}</p>` : ""}
@@ -459,13 +459,13 @@ export default function TransactionPage() {
             <aside className="w-60 shrink-0 bg-white border-r border-slate-200 flex-col hidden md:flex">
                 <div className="flex items-center gap-2 px-6 py-6">
                     <img
-                        src="/assets/sigurakost.png"
-                        alt="logo"
+                        src="/assets/sentra.svg"
+                        alt="Sentra logo"
                         className="w-6 h-6 object-contain"
                         onError={(e) => (e.currentTarget.style.display = "none")}
                     />
                     <span className="text-lg font-extrabold text-blue-700 tracking-tight">
-                        SiguraKost
+                        Sentra
                     </span>
                 </div>
                 <nav className="flex-1 px-4 overflow-y-auto">

@@ -87,12 +87,12 @@ export default function ResetPasswordPage() {
                     <div className="w-full md:w-1/2 bg-white px-8 py-10 sm:px-12 sm:py-12 flex flex-col justify-center">
                         <div className="flex items-center gap-2 mb-10">
                             <img
-                                src="/assets/sigurakost.png"
-                                alt="SiguraKost logo"
+                                src="/assets/sentra.svg"
+                                alt="Sentra logo"
                                 className="w-7 h-7 object-contain"
                             />
                             <span className="text-xl font-extrabold text-blue-700 tracking-tight">
-                                SiguraKost
+                                Sentra
                             </span>
                         </div>
 
