@@ -337,15 +337,39 @@ export default function ManageUserPage() {
             {/* --- SIDEBAR --- */}
             <aside className="w-60 shrink-0 bg-white border-r border-slate-200 flex-col hidden md:flex">
                 <div className="flex items-center gap-2 px-6 py-6">
-                    <img
-                        src="public/assets/sentra.svg"
-                        alt="Sentra logo"
-                        className="w-6 h-6 object-contain bg-slate-200 rounded-sm"
-                        onError={(e) => { e.currentTarget.style.display = "none"; }}
-                    />
-                    <span className="text-lg font-extrabold text-blue-700 tracking-tight">
-                        Sentra
-                    </span>
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 140" width="90" height="35" role="img" aria-label="sentra logo">
+                        <defs>
+                            <linearGradient id="brand" x1="0" y1="0" x2="1" y2="1">
+                                <stop offset="0" stop-color="#6366F1" />
+                                <stop offset="1" stop-color="#06B6D4" />
+                            </linearGradient>
+                        </defs>
+
+                        <rect x="0" y="0" width="360" height="140" rx="16" fill="#FFFFFF" />
+
+                        <g transform="translate(20,10) scale(1.2)">
+                            <g stroke="url(#brand)" stroke-width="4.5" stroke-linecap="round">
+                                <line x1="50" y1="50" x2="22" y2="22" />
+                                <line x1="50" y1="50" x2="78" y2="22" />
+                                <line x1="50" y1="50" x2="22" y2="78" />
+                                <line x1="50" y1="50" x2="78" y2="78" />
+                            </g>
+                            <g fill="url(#brand)">
+                                <circle cx="22" cy="22" r="8" />
+                                <circle cx="78" cy="22" r="8" />
+                                <circle cx="22" cy="78" r="8" />
+                                <circle cx="78" cy="78" r="8" />
+                            </g>
+                            <rect x="37" y="37" width="26" height="26" rx="8" fill="url(#brand)" />
+                            <text x="50" y="50" text-anchor="middle" dominant-baseline="central"
+                                font-family="'Inter','Segoe UI','Helvetica Neue',Arial,sans-serif"
+                                font-size="20" font-weight="700" fill="#FFFFFF">S</text>
+                        </g>
+
+                        <text x="160" y="84" text-anchor="start"
+                            font-family="'Inter','Segoe UI','Helvetica Neue',Arial,sans-serif"
+                            font-size="52" font-weight="600" letter-spacing="1" fill="#1D4ED8">sentra</text>
+                    </svg>
                 </div>
 
                 <nav className="flex-1 px-4 overflow-y-auto">

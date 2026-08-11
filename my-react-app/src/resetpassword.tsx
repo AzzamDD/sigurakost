@@ -86,14 +86,39 @@ export default function ResetPasswordPage() {
                 <div className="flex flex-col md:flex-row rounded-[20px] overflow-hidden">
                     <div className="w-full md:w-1/2 bg-white px-8 py-10 sm:px-12 sm:py-12 flex flex-col justify-center">
                         <div className="flex items-center gap-2 mb-10">
-                            <img
-                                src="public/assets/sentra.svg"
-                                alt="Sentra logo"
-                                className="w-7 h-7 object-contain"
-                            />
-                            <span className="text-xl font-extrabold text-blue-700 tracking-tight">
-                                Sentra
-                            </span>
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 140" width="90" height="35" role="img" aria-label="sentra logo">
+                                <defs>
+                                    <linearGradient id="brand" x1="0" y1="0" x2="1" y2="1">
+                                        <stop offset="0" stop-color="#6366F1" />
+                                        <stop offset="1" stop-color="#06B6D4" />
+                                    </linearGradient>
+                                </defs>
+
+                                <rect x="0" y="0" width="360" height="140" rx="16" fill="#FFFFFF" />
+
+                                <g transform="translate(20,10) scale(1.2)">
+                                    <g stroke="url(#brand)" stroke-width="4.5" stroke-linecap="round">
+                                        <line x1="50" y1="50" x2="22" y2="22" />
+                                        <line x1="50" y1="50" x2="78" y2="22" />
+                                        <line x1="50" y1="50" x2="22" y2="78" />
+                                        <line x1="50" y1="50" x2="78" y2="78" />
+                                    </g>
+                                    <g fill="url(#brand)">
+                                        <circle cx="22" cy="22" r="8" />
+                                        <circle cx="78" cy="22" r="8" />
+                                        <circle cx="22" cy="78" r="8" />
+                                        <circle cx="78" cy="78" r="8" />
+                                    </g>
+                                    <rect x="37" y="37" width="26" height="26" rx="8" fill="url(#brand)" />
+                                    <text x="50" y="50" text-anchor="middle" dominant-baseline="central"
+                                        font-family="'Inter','Segoe UI','Helvetica Neue',Arial,sans-serif"
+                                        font-size="20" font-weight="700" fill="#FFFFFF">S</text>
+                                </g>
+
+                                <text x="160" y="84" text-anchor="start"
+                                    font-family="'Inter','Segoe UI','Helvetica Neue',Arial,sans-serif"
+                                    font-size="52" font-weight="600" letter-spacing="1" fill="#1D4ED8">sentra</text>
+                            </svg>
                         </div>
 
                         {linkInvalid ? (
@@ -168,11 +193,10 @@ export default function ResetPasswordPage() {
                                                 onChange={handleConfirmationChange}
                                                 disabled={loading}
                                                 placeholder="Ulangi password baru"
-                                                className={`w-full rounded-xl border pl-10 pr-4 py-3 text-sm text-slate-700 placeholder-slate-400 focus:outline-none focus:ring-2 transition disabled:bg-slate-50 disabled:cursor-not-allowed ${
-                                                    error
+                                                className={`w-full rounded-xl border pl-10 pr-4 py-3 text-sm text-slate-700 placeholder-slate-400 focus:outline-none focus:ring-2 transition disabled:bg-slate-50 disabled:cursor-not-allowed ${error
                                                         ? "border-red-400 focus:ring-red-400 focus:border-red-400"
                                                         : "border-slate-300 focus:ring-blue-500 focus:border-blue-500"
-                                                }`}
+                                                    }`}
                                             />
                                         </div>
                                         {error && (
