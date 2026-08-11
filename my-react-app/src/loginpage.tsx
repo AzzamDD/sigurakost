@@ -58,11 +58,32 @@ export default function LoginPage() {
       <div className="w-full max-w-5xl bg-white rounded-2xl shadow-xl border-4 border-slate-900 overflow-hidden flex flex-col md:flex-row">
         <div className="w-full md:w-[45%] px-8 py-10 md:px-12 md:py-14 flex flex-col justify-center">
           <div className="flex items-center gap-2 mb-10">
-            <img
-              src="public/assets/sentra.svg"
-              alt="Sentra logo"
-              className="w-8 h-8 shrink-0 object-contain"
-            />
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="100" height="100" role="img" aria-label="sentra icon">
+              <defs>
+                <linearGradient id="brand" x1="0" y1="0" x2="1" y2="1">
+                  <stop offset="0" stop-color="#6366F1" />
+                  <stop offset="1" stop-color="#06B6D4" />
+                </linearGradient>
+              </defs>
+
+              <g stroke="url(#brand)" stroke-width="4.5" stroke-linecap="round">
+                <line x1="50" y1="50" x2="22" y2="22" />
+                <line x1="50" y1="50" x2="78" y2="22" />
+                <line x1="50" y1="50" x2="22" y2="78" />
+                <line x1="50" y1="50" x2="78" y2="78" />
+              </g>
+              <g fill="url(#brand)">
+                <circle cx="22" cy="22" r="8" />
+                <circle cx="78" cy="22" r="8" />
+                <circle cx="22" cy="78" r="8" />
+                <circle cx="78" cy="78" r="8" />
+              </g>
+              <rect x="37" y="37" width="26" height="26" rx="8" fill="url(#brand)" />
+              <text x="50" y="50" text-anchor="middle" dominant-baseline="central"
+                font-family="'Inter','Segoe UI','Helvetica Neue',Arial,sans-serif"
+                font-size="20" font-weight="700" fill="#FFFFFF">S</text>
+            </svg>
+
             <span className="text-2xl font-extrabold text-blue-700 tracking-tight">
               Sentra
             </span>
