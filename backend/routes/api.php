@@ -74,6 +74,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/transaksi', [TransaksiController::class, 'index']);
     Route::get('/transaksi/{id}', [TransaksiController::class, 'show']);
     Route::post('/transaksi', [TransaksiController::class, 'store']);
+    Route::get('/transaksi/produk-tersedia', [TransaksiController::class, 'produkTersedia']);
 
     // 🔒 KHUSUS ADMIN SAJA
     Route::middleware('role:admin')->group(function () {

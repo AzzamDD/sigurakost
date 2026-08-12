@@ -202,4 +202,46 @@ class TransaksiController extends Controller
             'message' => 'Transaksi dibatalkan, stok sudah dikembalikan.',
         ]);
     }
+
+    // ✅ Produk yang tersedia buat dijual — SUMBER-nya dari stok_toko, BUKAN produk global.
+    // Kasir gak kirim toko_id sama sekali (dipaksa dari session dia).
+    // Admin WAJIB kirim toko_id, dan itu divalidasi milik toko yang beneran ada.
+    public function produkTersedia(Request $request)
+    {
+        $isAdmin = $this->isAdmin($request);
+
+        if ($isAdmin) {
+            $request->validate([
+                'toko_id' => 'required|integer|exists:toko,id',
+            ]);
+            $tokoId = (int) $request->toko_id;
+        } else {
+            $toko = $this->tokoMilikKasir($request);
+            if (!$toko) {
+                return response()->json([
+                    'message' => 'Akun ini belum ditugaskan ke toko manapun. Hubungi admin.',
+                    'code'    => 'NO_TOKO',
+                ], 403);
+            }
+            $tokoId = $toko->id;
+        }
+
+        // ✅ stok > 0 doang yang muncul di dropdown — produk dengan stok 0
+        // gak usah dipajang, cuma bikin kasir salah klik lalu gagal pas submit.
+        $items = StokToko::with('produk')
+            ->where('toko_id', $tokoId)
+            ->where('stok', '>', 0)
+            ->get()
+            ->map(function ($s) {
+                return [
+                    'id'    => $s->produk->id,
+                    'nama'  => $s->produk->nama,
+                    'harga' => (int) $s->produk->harga,
+                    'stok'  => (int) $s->stok,
+                ];
+            })
+            ->values();
+
+        return response()->json($items);
+    }
 }

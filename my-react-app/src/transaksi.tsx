@@ -184,14 +184,30 @@ export default function TransactionPage() {
         } catch { /* silent */ }
     };
 
-    const fetchProduk = async () => {
+    const fetchProduk = async (tokoId?: string) => {
         try {
-            const res = await fetch(`${API_URL}/produk`, { headers: authHeaders() });
+            const params = new URLSearchParams();
+            if (isAdmin) {
+                if (!tokoId) {
+                    // ✅ Admin belum pilih toko — jangan fetch, kosongin aja
+                    setProdukList([]);
+                    return;
+                }
+                params.set("toko_id", tokoId);
+            }
+            const res = await fetch(`${API_URL}/transaksi/produk-tersedia?${params}`, {
+                headers: authHeaders(),
+            });
+            if (handleUnauthorized(res.status)) return;
             if (res.ok) {
                 const json = await res.json();
-                setProdukList(Array.isArray(json) ? json : (json.data ?? []));
+                setProdukList(Array.isArray(json) ? json : []);
+            } else {
+                setProdukList([]);
             }
-        } catch { /* silent */ }
+        } catch {
+            setProdukList([]);
+        }
     };
 
     /* ── Effects ── */
@@ -700,7 +716,7 @@ export default function TransactionPage() {
 
                                                                 </button>
                                                                 <button
-                                                                    onClick={() => printStruk(t)}  
+                                                                    onClick={() => printStruk(t)}
                                                                     className="inline-flex items-center gap-1.5 bg-slate-900 hover:bg-black text-white text-xs font-medium px-3.5 py-1.5 rounded-full transition"
                                                                 >
                                                                     <Receipt className="w-3.5 h-3.5" />
