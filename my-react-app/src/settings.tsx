@@ -519,41 +519,6 @@ const menuItems = [
                         </form>
                     </div>
 
-                    {/* Notification Preferences */}
-                    <div className="bg-white rounded-xl border border-slate-200 p-6">
-                        <h2 className="text-base font-semibold text-slate-800 mb-5">
-                            Notification Preferences
-                        </h2>
-
-                        <div className="space-y-4">
-                            <div className="flex items-center justify-between py-3 border-b border-slate-100">
-                                <div className="flex items-center gap-3">
-                                    <div className="w-9 h-9 rounded-lg bg-blue-50 flex items-center justify-center">
-                                        <Mail className="w-4 h-4 text-blue-600" />
-                                    </div>
-                                    <div>
-                                        <p className="text-sm font-medium text-slate-800">
-                                            Email Notifications
-                                        </p>
-                                        <p className="text-xs text-slate-400">
-                                            Receive updates via email
-                                        </p>
-                                    </div>
-                                </div>
-                                <button
-                                    type="button"
-                                    onClick={() => handleNotificationToggle("email")}
-                                    className={`relative w-11 h-6 rounded-full transition ${notifications.email ? "bg-blue-600" : "bg-slate-300"
-                                        }`}
-                                >
-                                    <span
-                                        className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${notifications.email ? "translate-x-5" : "translate-x-0"
-                                            }`}
-                                    />
-                                </button>
-                            </div>
-                        </div>
-                    </div>
 
                     {/* Account */}
                     <div className="bg-white rounded-xl border border-slate-200 p-6">
