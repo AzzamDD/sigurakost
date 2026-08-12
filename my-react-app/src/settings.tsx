@@ -68,11 +68,6 @@ export default function SettingsPage() {
         confirmPassword: "",
     });
 
-    const [notifications, setNotifications] = useState({
-        email: true,
-        inApp: true,
-        whatsapp: false,
-    });
 
 const menuItems = [
     { label: "Beranda", icon: Home, path: "/dashboard", active: true },
