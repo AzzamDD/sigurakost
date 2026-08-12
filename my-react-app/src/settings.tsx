@@ -223,9 +223,6 @@ const menuItems = [
         }
     };
 
-    const handleNotificationToggle = (key: keyof typeof notifications) => {
-        setNotifications((prev) => ({ ...prev, [key]: !prev[key] }));
-    };
 
 
     const handleLogout = async () => {
