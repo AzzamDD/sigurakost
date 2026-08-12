@@ -136,14 +136,14 @@ export default function WarehousePage() {
     // ✅ State search untuk produk di warehouse
     const [productSearchQuery, setProductSearchQuery] = useState("");
 
-const menuItems = [
-    { label: "Beranda", icon: Home, path: "/dashboard", active: false },
-    { label: "Produk", icon: Package, path: "/produk", active: false },
-    { label: "Kategori", icon: Tags, path: "/kategori", active: false },
-    { label: "Warehouse", icon: WarehouseIcon, path: "/warehouse", active: true },
-    { label: "Merchant", icon: Store, path: "/merchant", active: false },
-    { label: "Transaksi", icon: Receipt, path: "/transaksi", active: false },
-];
+    const menuItems = [
+        { label: "Beranda", icon: Home, path: "/dashboard", active: false },
+        { label: "Produk", icon: Package, path: "/produk", active: false },
+        { label: "Kategori", icon: Tags, path: "/kategori", active: false },
+        { label: "Warehouse", icon: WarehouseIcon, path: "/warehouse", active: true },
+        { label: "Merchant", icon: Store, path: "/merchant", active: false },
+        { label: "Transaksi", icon: Receipt, path: "/transaksi", active: false },
+    ];
 
     const accountItems = [
         { label: "Roles", icon: ShieldCheck, path: "/role" },
@@ -455,13 +455,13 @@ const menuItems = [
 
         setSubmittingStock(true);
         try {
-            const res = await fetch(`${API_URL}/stok-gudang/${stockTargetId}/tambah-stok`, {
-                method: "PATCH",
+            const res = await fetch(`${API_URL}/stok-gudang/${stockTargetId}`, {
+                method: "PUT",
                 headers: {
                     "Content-Type": "application/json",
                     ...authHeaders(),
                 },
-                body: JSON.stringify({ stok: Number(stockAmount) || 0 }),
+                body: JSON.stringify({ tambah: Number(stockAmount) || 0 }),
             });
 
             const data = await res.json();
@@ -484,23 +484,23 @@ const menuItems = [
         view === "list"
             ? "Manage Warehouses"
             : view === "detail"
-            ? "Warehouse Details"
-            : view === "warehouse-form"
-            ? editingWarehouseId !== null
-                ? "Edit Warehouse"
-                : "Add New Warehouse"
-            : "Assign a Product";
+                ? "Warehouse Details"
+                : view === "warehouse-form"
+                    ? editingWarehouseId !== null
+                        ? "Edit Warehouse"
+                        : "Add New Warehouse"
+                    : "Assign a Product";
 
     const breadcrumbLabel =
         view === "detail"
             ? "Manage Warehouses"
             : view === "warehouse-form"
-            ? warehouseFormOrigin === "detail"
-                ? "Warehouse Details"
-                : "Manage Warehouses"
-            : view === "product-form"
-            ? "Warehouse Details"
-            : "";
+                ? warehouseFormOrigin === "detail"
+                    ? "Warehouse Details"
+                    : "Manage Warehouses"
+                : view === "product-form"
+                    ? "Warehouse Details"
+                    : "";
 
     const handleBreadcrumb = () => {
         if (view === "detail") backToList();
@@ -559,11 +559,10 @@ const menuItems = [
                             <li key={label}>
                                 <button
                                     onClick={() => navigate(path)}
-                                    className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition ${
-                                        active
+                                    className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition ${active
                                             ? "bg-blue-50 text-blue-700"
                                             : "text-slate-500 hover:bg-slate-50 hover:text-slate-700"
-                                    }`}
+                                        }`}
                                 >
                                     <Icon className="w-[18px] h-[18px]" />
                                     {label}
@@ -618,15 +617,15 @@ const menuItems = [
                                     view === "list"
                                         ? "Cari gudang atau alamat..."
                                         : view === "detail"
-                                        ? "Cari produk atau kategori..."
-                                        : "Search"
+                                            ? "Cari produk atau kategori..."
+                                            : "Search"
                                 }
                                 value={
                                     view === "list"
                                         ? searchQuery
                                         : view === "detail"
-                                        ? productSearchQuery
-                                        : ""
+                                            ? productSearchQuery
+                                            : ""
                                 }
                                 onChange={(e) => {
                                     if (view === "list") setSearchQuery(e.target.value);
@@ -637,7 +636,7 @@ const menuItems = [
                             />
                             {/* ✅ Tombol clear */}
                             {(searchQuery && view === "list") ||
-                            (productSearchQuery && view === "detail") ? (
+                                (productSearchQuery && view === "detail") ? (
                                 <button
                                     type="button"
                                     onClick={() => {
