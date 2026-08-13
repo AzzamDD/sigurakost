@@ -46,7 +46,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/produk', [ProdukController::class, 'store']);
     Route::put('/produk/{id}', [ProdukController::class, 'update']);
     Route::delete('/produk/{id}', [ProdukController::class, 'destroy']);
-    
+
 
     Route::get('/gudang', [GudangController::class, 'index']);
     Route::get('/gudang/{id}', [GudangController::class, 'show']);
@@ -71,10 +71,11 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::put('/stok-toko/{id}', [StokTokoController::class, 'update']);
     Route::delete('/stok-toko/{id}', [StokTokoController::class, 'destroy']);
 
+    Route::get('/transaksi/produk-tersedia', [TransaksiController::class, 'produkTersedia']); 
+    Route::get('/transaksi/{id}', [TransaksiController::class, 'show']);                  
     Route::get('/transaksi', [TransaksiController::class, 'index']);
-    Route::get('/transaksi/{id}', [TransaksiController::class, 'show']);
     Route::post('/transaksi', [TransaksiController::class, 'store']);
-    Route::get('/transaksi/produk-tersedia', [TransaksiController::class, 'produkTersedia']);
+    Route::delete('/transaksi/{id}', [TransaksiController::class, 'destroy']);
 
     // 🔒 KHUSUS ADMIN SAJA
     Route::middleware('role:admin')->group(function () {
