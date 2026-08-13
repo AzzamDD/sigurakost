@@ -426,7 +426,7 @@ export default function TransactionPage() {
             </style>
         </head>
         <body>
-            <h2>Tokoku</h2>
+            <h2>sentra</h2>
             <p>${t.toko?.nama ?? "-"}</p>
             <p>Kasir: ${t.pengguna?.nama ?? "-"}</p>
             ${t.nama_pelanggan ? `<p>Pelanggan: ${t.nama_pelanggan}</p>` : ""}
