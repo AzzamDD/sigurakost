@@ -2,7 +2,7 @@ import { type ChangeEvent, type FormEvent, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { ArrowLeft, Mail, CheckCircle2, Loader2 } from "lucide-react";
 
-const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8000/api";
+const API_URL = (import.meta.env.VITE_API_URL || "http://localhost:8000") + "/api";
 
 export default function ForgotPasswordPage() {
     const navigate = useNavigate();
